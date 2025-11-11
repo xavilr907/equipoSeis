@@ -14,4 +14,10 @@ interface ProductDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(product: ProductEntity)
+
+    @Query("SELECT * FROM products WHERE code = :code LIMIT 1")
+    suspend fun getByCode(code: String): ProductEntity?
+
+    @Query("DELETE FROM products WHERE code = :code")
+    suspend fun deleteByCode(code: String)
 }

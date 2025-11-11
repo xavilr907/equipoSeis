@@ -18,7 +18,11 @@ class HomeFragment : Fragment() {
     private val binding get() = _binding!!
 
     private lateinit var vm: HomeViewModel
-    private val adapter = ProductAdapter()
+    // pass click lambda to adapter
+    private val adapter by lazy { ProductAdapter { code ->
+        val bundle = Bundle().apply { putString("productCode", code) }
+        findNavController().navigate(R.id.action_homeFragment_to_productDetailFragment, bundle)
+    } }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -33,6 +37,7 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.rvProducts.adapter = adapter
+        binding.rvProducts.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(requireContext())
 
         // Room DB
         val db = Room.databaseBuilder(
@@ -47,6 +52,11 @@ class HomeFragment : Fragment() {
         // Observa los datos y actualiza la lista
         vm.products.observe(viewLifecycleOwner) { list ->
             adapter.submitList(list)
+        }
+
+        // Observa el total formateado y lo muestra en el widget
+        vm.totalFormatted.observe(viewLifecycleOwner) { total ->
+            binding.tvTotalInventory.text = "Total inventario: $total"
         }
 
         // Navegar a AddProductFragment

@@ -10,7 +10,7 @@ import com.univalle.inventarioapp.databinding.ItemProductBinding
 import java.text.NumberFormat
 import java.util.Locale
 
-class ProductAdapter :
+class ProductAdapter(private val onItemClick: (String) -> Unit) :
     ListAdapter<ProductEntity, ProductAdapter.VH>(DIFF) {
 
     companion object {
@@ -29,11 +29,13 @@ class ProductAdapter :
             binding.tvCode.text = "Código: ${item.code}"
 
             // priceCents -> formatear como moneda simple
-            val nf = NumberFormat.getCurrencyInstance(Locale("es", "CO"))
+            val nf = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("es-CO"))
             val priceCOP = item.priceCents / 100.0
             binding.tvPrice.text = "Precio: ${nf.format(priceCOP)}"
 
             binding.tvQty.text = "Cantidad: ${item.quantity}"
+
+            binding.root.setOnClickListener { onItemClick(item.code) }
         }
     }
 
@@ -46,4 +48,3 @@ class ProductAdapter :
         holder.bind(getItem(position))
     }
 }
-

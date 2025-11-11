@@ -2,4 +2,10 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Colores por la HU -->
+    <color name="overlay_black_cc">#CC000000</color> <!-- fondo semi-opa -->
+    <color name="toolbar_gray">#424242</color>         <!-- Toolbar -->
+    <color name="orange_primary">#F76B3F</color>       <!-- Botón / FAB naranja -->
+    <color name="total_orange">#E64A19</color>         <!-- color para precio/total -->
 </resources>

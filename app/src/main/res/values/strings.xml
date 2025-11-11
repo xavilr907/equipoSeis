@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">InventarioApp</string>
+    <string name="title_product_detail">Detalle del producto</string>
+    <string name="label_product_name">Nombre producto</string>
+    <string name="label_price_unit">Precio Unidad :</string>
+    <string name="label_quantity">Cantidad Disponible:</string>
+    <string name="label_total">Total:</string>
+    <string name="sample_currency">$ 0.00</string>
+    <string name="sample_quantity">0</string>
+    <string name="btn_delete">Eliminar</string>
+    <string name="desc_edit_fab">Editar producto</string>
 </resources>
