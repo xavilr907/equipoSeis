@@ -1,12 +1,14 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    id("kotlin-kapt")                 // Room
-    id("com.google.gms.google-services") // <-- NUEVO (Firebase)
+    id("kotlin-kapt")                    // Room (kapt)
+    id("com.google.gms.google-services") // Firebase
 }
 
 android {
     namespace = "com.univalle.inventarioapp"
+
+    // Si usas version catalogs con "release(36)" déjalo así:
     compileSdk {
         version = release(36)
     }
@@ -29,20 +31,28 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = "11"
     }
+
     buildFeatures {
         viewBinding = true
     }
 }
 
+/** ⬇️ IMPORTANTE: kapt va FUERA del bloque android {} */
+kapt {
+    correctErrorTypes = true
+}
+
 dependencies {
-    // UI / AndroidX (lo tuyo)
+    // UI / AndroidX
     implementation("androidx.coordinatorlayout:coordinatorlayout:1.2.0")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.4")
@@ -52,6 +62,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -59,8 +70,8 @@ dependencies {
     // ===== Room =====
     val roomVersion = "2.6.1"
     implementation("androidx.room:room-runtime:$roomVersion")
-    kapt("androidx.room:room-compiler:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
+    kapt("androidx.room:room-compiler:$roomVersion")
 
     // ===== Lifecycle =====
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4")
