@@ -1,6 +1,7 @@
 package com.univalle.inventarioapp.ui.detail
 
 import android.app.AlertDialog
+import android.content.Intent                     // 👈 NUEVO
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -10,6 +11,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.room.Room
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.univalle.inventarioapp.EditProductActivity // 👈 NUEVO
 import com.univalle.inventarioapp.data.local.AppDatabase
 import com.univalle.inventarioapp.databinding.FragmentProductDetailBinding
 
@@ -44,11 +46,8 @@ class ProductDetailFragment : Fragment() {
         }
 
         // DB and ViewModel
-        val db = Room.databaseBuilder(
-            requireContext(),
-            AppDatabase::class.java,
-            "inventario.db"
-        ).fallbackToDestructiveMigration().build()
+        val db = AppDatabase.getInstance(requireContext())
+
 
         val productCode = arguments?.getString("productCode") ?: run {
             // no code -> go back
@@ -106,25 +105,21 @@ class ProductDetailFragment : Fragment() {
                 .show()
         }
 
-        // FAB edit -> navigate to EditProductFragment (HU 6.0)
+        // 🆕 FAB edit -> abrir EditProductActivity
         binding.fabEdit.setOnClickListener {
-            val bundle = Bundle().apply { putString("productCode", productCode) }
-            // try navigate to edit; if destination not present, just ignore
-            try {
-                findNavController().navigate(com.univalle.inventarioapp.R.id.action_productDetail_to_editProductFragment, bundle)
-            } catch (e: Exception) {
-                // fallback: show message
-                MaterialAlertDialogBuilder(requireContext())
-                    .setMessage("Funcionalidad de edición no disponible")
-                    .setPositiveButton("OK", null)
-                    .show()
+            val context = requireContext()
+            val intent = Intent(context, EditProductActivity::class.java).apply {
+                // 👇 Asegúrate de usar la misma clave que espera tu EditProductActivity
+                putExtra("EXTRA_CODE", productCode)
             }
+            startActivity(intent)
         }
     }
 
     private fun formatCurrency(cents: Long): String {
         val units = cents / 100.0
-        return java.text.NumberFormat.getCurrencyInstance(java.util.Locale.getDefault()).format(units)
+        return java.text.NumberFormat.getCurrencyInstance(java.util.Locale.getDefault())
+            .format(units)
     }
 
     override fun onDestroyView() {

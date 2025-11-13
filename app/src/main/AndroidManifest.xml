@@ -24,7 +24,12 @@
             </intent-filter>
         </activity>
 
-        <!-- ⬇️ AQUÍ REGISTRAMOS EL WIDGET -->
+        <!-- 🆕 Activity de edición -->
+        <activity
+            android:name=".EditProductActivity"
+            android:exported="false" />
+
+        <!-- ⬇️ WIDGET -->
         <receiver
             android:name=".InventoryWidget"
             android:exported="false">
