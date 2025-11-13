@@ -3,6 +3,15 @@
   <component name="CopilotDiffPersistence">
     <option name="pendingDiffs">
       <map>
+        <entry key="$PROJECT_DIR$/app/src/main/java/com/univalle/inventarioapp/data/local/AppDatabase.kt">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/app/src/main/java/com/univalle/inventarioapp/data/local/AppDatabase.kt" />
+              <option name="originalContent" value="package com.univalle.inventarioapp.data.local&#10;&#10;import androidx.room.Database&#10;import androidx.room.RoomDatabase&#10;import com.univalle.inventarioapp.data.model.ProductEntity   // ← IMPORT CORRECTO&#10;&#10;@Database(&#10;    entities = [ProductEntity::class],&#10;    version = 3,&#10;    exportSchema = false&#10;)&#10;abstract class AppDatabase : RoomDatabase() {&#10;    abstract fun productDao(): ProductDao&#10;}&#10;" />
+              <option name="updatedContent" value="package com.univalle.inventarioapp.data.local&#10;&#10;import androidx.room.Database&#10;import androidx.room.RoomDatabase&#10;import com.univalle.inventarioapp.data.model.ProductEntity   // ← IMPORT CORRECTO&#10;&#10;@Database(&#10;    entities = [ProductEntity::class],&#10;    version = 4, // Incrementada porque la estructura (schema) cambió&#10;    exportSchema = false&#10;)&#10;abstract class AppDatabase : RoomDatabase() {&#10;    abstract fun productDao(): ProductDao&#10;}" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
         <entry key="$PROJECT_DIR$/app/src/main/res/values/strings.xml">
           <value>
             <PendingDiffInfo>

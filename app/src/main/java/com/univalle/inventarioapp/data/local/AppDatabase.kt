@@ -6,7 +6,7 @@ import com.univalle.inventarioapp.data.model.ProductEntity   // ← IMPORT CORRE
 
 @Database(
     entities = [ProductEntity::class],
-    version = 3,
+    version = 4, // Incrementada porque la estructura (schema) cambió
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
