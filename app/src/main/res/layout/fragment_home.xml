@@ -5,6 +5,20 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- Widget: total inventario -->
+    <TextView
+        android:id="@+id/tv_total_inventory"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Total inventario: $ 0.00"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:padding="12dp"
+        android:gravity="center"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvProducts"
         android:layout_width="0dp"
@@ -12,7 +26,7 @@
         android:clipToPadding="false"
         android:padding="12dp"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_total_inventory"
         app:layout_constraintBottom_toTopOf="@+id/btnAdd"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>

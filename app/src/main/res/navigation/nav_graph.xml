@@ -11,10 +11,36 @@
         <action
             android:id="@+id/action_homeFragment_to_addProductFragment"
             app:destination="@id/addProductFragment" />
+        <!-- Action to detail -->
+        <action
+            android:id="@+id/action_homeFragment_to_productDetailFragment"
+            app:destination="@id/productDetailFragment" />
     </fragment>
 
     <fragment
         android:id="@+id/addProductFragment"
         android:name="com.univalle.inventarioapp.ui.add.AddProductFragment"
         android:label="Agregar" />
+
+    <fragment
+        android:id="@+id/productDetailFragment"
+        android:name="com.univalle.inventarioapp.ui.detail.ProductDetailFragment"
+        android:label="Detalle">
+        <argument
+            android:name="productCode"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_productDetail_to_home"
+            app:destination="@id/homeFragment" />
+        <action
+            android:id="@+id/action_productDetail_to_editProductFragment"
+            app:destination="@id/editProductFragment" />
+    </fragment>
+
+    <!-- Placeholder for EditProduct (HU 6.0) -->
+    <fragment
+        android:id="@+id/editProductFragment"
+        android:name="com.univalle.inventarioapp.ui.edit.EditProductFragment"
+        android:label="Editar" />
+
 </navigation>

@@ -6,8 +6,8 @@ import com.google.firebase.firestore.DocumentId
 
 @Entity(tableName = "products")
 data class ProductEntity(
-    @DocumentId var id: String? = null,   // Firestore docId
-    @PrimaryKey var code: String = "",    // PK de Room y campo normal en Firestore
+    @DocumentId var id: String? = null,          // Firestore docId
+    @PrimaryKey var code: String = "",           // PK de Room y campo normal en Firestore
     var name: String = "",
     var priceCents: Long = 0L,
     var quantity: Int = 0
