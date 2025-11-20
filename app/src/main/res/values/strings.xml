@@ -1,4 +1,5 @@
 <resources>
+    <!-- APP -->
     <string name="app_name">InventarioApp</string>
 
     <!-- PRODUCT DETAIL -->
@@ -15,7 +16,6 @@
     <string name="item_price">Precio: </string>
     <string name="item_qty">Cantidad: </string>
 
-
     <!-- ADD PRODUCT -->
     <string name="title_agregar_producto">Agregar producto</string>
     <string name="hint_codigo_producto">Código producto</string>
@@ -28,4 +28,48 @@
     <string name="title_home_inventario">Inventario</string>
     <string name="total_inventory_initial">Total inventario: $ 0,00</string>
     <string name="desc_add_product">Agregar producto</string>
+
+    <!-- LOGIN con bloqueo del dispositivo (PIN / Patrón / Huella / Contraseña) -->
+    <string name="title_login">Ingreso</string>
+
+    <string name="login_subtitle_device">
+        Autentícate con la huella, PIN, patrón o contraseña configurados en este dispositivo para acceder al inventario.
+    </string>
+
+    <string name="btn_login_device">Autenticar con bloqueo del dispositivo</string>
+
+    <string name="login_hint_device">
+        Se usará el mismo método de bloqueo que tienes configurado en tu teléfono (huella, PIN, patrón o contraseña).
+    </string>
+
+    <string name="login_biometric_not_available">
+        Biometría o credenciales del dispositivo no disponibles
+    </string>
+
+    <string name="login_biometric_failed">Autenticación fallida</string>
+
+    <string name="login_biometric_error">Error de autenticación</string>
+
+    <string name="login_need_device_lock">
+    Debes configurar un método de bloqueo del dispositivo (PIN, patrón, contraseña o huella) para usar la aplicación.
+</string>
+    <string name="login_go_to_settings">Configurar bloqueo</string>
+    <string name="cancel">Cancelar</string>
+    <string name="action_logout">Cerrar sesión</string>
+
+    <!-- HU 2.0: Login con animación de huella -->
+    <string name="login_tap_fingerprint">Toca la huella para ingresar</string>
+
+    <!-- Textos del cuadro de BiometricPrompt -->
+    <string name="biometric_title">Autenticación con biometría</string>
+    <string name="biometric_subtitle">Ingresa tu huella o PIN del dispositivo</string>
+
+    <!-- Mensajes genéricos de error para el callback -->
+    <string name="biometric_error_not_available">Biometría no disponible en este dispositivo</string>
+    <string name="biometric_error_failed">Autenticación fallida</string>
+    <string name="biometric_error_generic">Error de autenticación</string>
+
+
+
+
 </resources>

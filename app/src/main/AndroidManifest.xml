@@ -15,8 +15,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.InventarioApp">
 
+        <!-- 🆕 LOGIN: ahora es la actividad inicial (launcher) -->
         <activity
-            android:name=".MainActivity"
+            android:name=".LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -24,7 +25,12 @@
             </intent-filter>
         </activity>
 
-        <!-- 🆕 Activity de edición -->
+        <!-- 🏠 HOME: se abre solo después de autenticarse -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false" />
+
+        <!-- ✏️ Activity de edición -->
         <activity
             android:name=".EditProductActivity"
             android:exported="false" />

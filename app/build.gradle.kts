@@ -62,6 +62,12 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+    // Biometría (necesario para Authenticators y setAllowedAuthenticators)
+    implementation("androidx.biometric:biometric:1.1.0")
+
+    // Lottie (por si aún no lo pusiste)
+    implementation("com.airbnb.android:lottie:6.4.0")
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

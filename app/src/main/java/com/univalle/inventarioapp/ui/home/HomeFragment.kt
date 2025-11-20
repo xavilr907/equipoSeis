@@ -1,14 +1,15 @@
 package com.univalle.inventarioapp.ui.home
 
+import android.content.Intent
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.room.Room
+import com.univalle.inventarioapp.LoginActivity
 import com.univalle.inventarioapp.R
 import com.univalle.inventarioapp.data.local.AppDatabase
 import com.univalle.inventarioapp.databinding.FragmentHomeBinding
@@ -20,7 +21,6 @@ class HomeFragment : Fragment() {
 
     private lateinit var vm: HomeViewModel
 
-    // click en item -> detalle
     private val adapter by lazy {
         ProductAdapter { code ->
             val bundle = Bundle().apply { putString("productCode", code) }
@@ -29,6 +29,12 @@ class HomeFragment : Fragment() {
                 bundle
             )
         }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // habilita el menú en este fragment
+        setHasOptionsMenu(true)
     }
 
     override fun onCreateView(
@@ -43,14 +49,15 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // usar la toolbar del fragmento como ActionBar
+        (requireActivity() as AppCompatActivity).setSupportActionBar(binding.toolbarHome)
+
         // RecyclerView
         binding.rvProducts.layoutManager = LinearLayoutManager(requireContext())
         binding.rvProducts.adapter = adapter
 
-        // Mostrar progress mientras cargan los productos
         binding.progressHome.visibility = View.VISIBLE
 
-        // Room DB
         val db = Room.databaseBuilder(
             requireContext(),
             AppDatabase::class.java,
@@ -60,20 +67,38 @@ class HomeFragment : Fragment() {
         val factory = HomeViewModelFactory(db.productDao())
         vm = ViewModelProvider(this, factory)[HomeViewModel::class.java]
 
-        // Lista de productos
         vm.products.observe(viewLifecycleOwner) { list ->
             binding.progressHome.visibility = View.GONE
             adapter.submitList(list)
         }
 
-        // Total inventario
         vm.totalFormatted.observe(viewLifecycleOwner) { total ->
             binding.tvTotalInventory.text = "Total inventario: $total"
         }
 
-        // FAB para agregar producto (antes era btnAdd)
         binding.fabAdd.setOnClickListener {
             findNavController().navigate(R.id.action_homeFragment_to_addProductFragment)
+        }
+    }
+
+    // ---- MENÚ (icono cerrar sesión) ----
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.menu_home, menu)
+        super.onCreateOptionsMenu(menu, inflater)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_logout -> {
+                // Ir al Login y limpiar el back stack
+                val intent = Intent(requireContext(), LoginActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                }
+                startActivity(intent)
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
     }
 

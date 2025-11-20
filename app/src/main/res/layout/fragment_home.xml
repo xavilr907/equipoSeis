@@ -14,16 +14,18 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <!-- Toolbar gris con título Inventario -->
+        <!-- Toolbar -->
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbarHome"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="#424242"
+            android:elevation="6dp"
             app:title="@string/title_home_inventario"
-            app:titleTextColor="@android:color/white" />
+            app:titleTextColor="@android:color/white"
+            app:navigationIconTint="@android:color/white"/>
 
-        <!-- Texto Total inventario -->
+        <!-- Total inventario -->
         <TextView
             android:id="@+id/tv_total_inventory"
             android:layout_width="match_parent"
@@ -34,13 +36,12 @@
             android:textColor="@android:color/white"
             android:padding="16dp" />
 
-        <!-- Contenedor lista + progress -->
+        <!-- Lista + progress -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1">
 
-            <!-- Lista de productos -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvProducts"
                 android:layout_width="match_parent"
@@ -49,7 +50,6 @@
                 android:padding="12dp"
                 tools:listitem="@layout/item_product" />
 
-            <!-- Progress circular naranja -->
             <ProgressBar
                 android:id="@+id/progressHome"
                 style="?android:attr/progressBarStyleLarge"
@@ -59,11 +59,12 @@
                 android:visibility="gone"
                 android:indeterminate="true"
                 android:indeterminateTint="#E7522E" />
+
         </FrameLayout>
 
     </LinearLayout>
 
-    <!-- FAB naranja para agregar producto -->
+    <!-- Botón FAB agregar -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabAdd"
         android:layout_width="wrap_content"
@@ -73,4 +74,5 @@
         android:contentDescription="@string/desc_add_product"
         app:backgroundTint="@color/orange_primary"
         app:srcCompat="@android:drawable/ic_input_add" />
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
