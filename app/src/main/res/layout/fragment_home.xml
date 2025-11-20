@@ -6,6 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#CC000000"
+    android:fitsSystemWindows="true"
     tools:context=".ui.home.HomeFragment">
 
     <LinearLayout
@@ -14,12 +15,12 @@
         android:orientation="vertical">
 
         <!-- Toolbar gris con título Inventario -->
-        <androidx.appcompat.widget.Toolbar
+        <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbarHome"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="#424242"
-            app:title="Inventario"
+            app:title="@string/title_home_inventario"
             app:titleTextColor="@android:color/white" />
 
         <!-- Texto Total inventario -->
@@ -27,11 +28,11 @@
             android:id="@+id/tv_total_inventory"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Total inventario: $ 0,00"
+            android:text="@string/total_inventory_initial"
             android:textStyle="bold"
             android:textSize="18sp"
             android:textColor="@android:color/white"
-            android:padding="12dp" />
+            android:padding="16dp" />
 
         <!-- Contenedor lista + progress -->
         <FrameLayout
@@ -57,7 +58,7 @@
                 android:layout_gravity="center"
                 android:visibility="gone"
                 android:indeterminate="true"
-                android:indeterminateTint="#e7522e" />
+                android:indeterminateTint="#E7522E" />
         </FrameLayout>
 
     </LinearLayout>
@@ -69,7 +70,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_margin="20dp"
+        android:contentDescription="@string/desc_add_product"
         app:backgroundTint="@color/orange_primary"
         app:srcCompat="@android:drawable/ic_input_add" />
-
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
