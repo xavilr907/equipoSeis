@@ -30,16 +30,32 @@
         android:layout_alignStart="@id/imgLogo"
         android:layout_marginTop="4dp" />
 
-    <!-- Pregunta -->
-    <TextView
-        android:id="@+id/txtPregunta"
+    <!-- Fila: Pregunta + Ojo -->
+    <LinearLayout
+        android:id="@+id/rowPregunta"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="¿Cuánto tengo de inventario?"
-        android:textColor="#FFFFFF"
-        android:textSize="14sp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true" />
+        android:layout_alignParentEnd="true">
+
+        <TextView
+            android:id="@+id/txtPregunta"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="¿Cuánto tengo de inventario?"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:layout_marginEnd="6dp"/>
+
+        <ImageView
+            android:id="@+id/btnToggle"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:src="@drawable/abierto"
+            android:contentDescription="Mostrar/Ocultar saldo"/>
+    </LinearLayout>
 
     <!-- Saldo -->
     <TextView
@@ -50,20 +66,9 @@
         android:textColor="#FFFFFF"
         android:textSize="16sp"
         android:textStyle="bold"
-        android:layout_below="@id/txtPregunta"
+        android:layout_below="@id/rowPregunta"
         android:layout_alignParentEnd="true"
         android:layout_marginTop="6dp" />
-
-    <!-- Botón ojo -->
-    <ImageView
-        android:id="@+id/btnToggle"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:src="@drawable/abierto"
-        android:contentDescription="Mostrar/Ocultar saldo"
-        android:layout_alignTop="@id/txtSaldo"
-        android:layout_toStartOf="@id/txtSaldo"
-        android:layout_marginEnd="8dp" />
 
     <!-- Texto Gestionar inventario -->
     <TextView
