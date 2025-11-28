@@ -1,159 +1,167 @@
 package com.univalle.inventarioapp
 
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
+import android.text.Editable
+import android.text.InputFilter
+import android.text.TextWatcher
+import android.util.Patterns
+import android.view.inputmethod.EditorInfo
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricPrompt
-import androidx.core.content.ContextCompat
+import com.google.firebase.auth.FirebaseAuth
 import com.univalle.inventarioapp.databinding.ActivityLoginBinding
-import java.util.concurrent.Executor
 
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
-    private lateinit var executor: Executor
-    private lateinit var biometricPrompt: BiometricPrompt
-    private lateinit var promptInfo: BiometricPrompt.PromptInfo
+    private lateinit var auth: FirebaseAuth
 
-    // BIOMETRÍA + CREDENCIALES DEL DISPOSITIVO (PIN / patrón / contraseña)
-    private val authenticators =
-        BiometricManager.Authenticators.BIOMETRIC_STRONG or
-                BiometricManager.Authenticators.DEVICE_CREDENTIAL
-
+    companion object {
+        const val ACTION_REFRESH = "com.univalle.inventarioapp.ACTION_REFRESH_WIDGET"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 🔹 IMPORTANTE PARA HU 2.0:
-        // No usamos toolbar aquí (la pantalla debe ser "limpia")
+        auth = FirebaseAuth.getInstance()
 
-        // Configuramos BiometricPrompt y PromptInfo
-        setupBiometric()
+        // Limitar email a 40 caracteres
+        binding.etEmail.filters = arrayOf(InputFilter.LengthFilter(40))
 
-        // Botón "Autenticar con bloqueo del dispositivo"
-        binding.btnLoginDevice.setOnClickListener {
-            startBiometricAuth()
+        // Password solo números: podemos controlar con InputType en XML, pero validamos aquí también
+        // Mostrar/ocultar contraseña
+        binding.ivTogglePassword.setOnClickListener {
+            val isVisible = binding.etPassword.transformationMethod == null
+            if (isVisible) {
+                // actualmente visible -> ocultar
+                binding.etPassword.transformationMethod = android.text.method.PasswordTransformationMethod.getInstance()
+                binding.ivTogglePassword.setImageResource(R.drawable.cerrado) // adapta tu drawable
+            } else {
+                binding.etPassword.transformationMethod = null
+                binding.ivTogglePassword.setImageResource(R.drawable.abierto) // adapta tu drawable
+            }
+            // mover cursor al final
+            binding.etPassword.setSelection(binding.etPassword.text?.length ?: 0)
         }
 
-        // Si en tu layout tienes una animación de huella (Lottie) con id lottieFingerprint,
-        // también la usamos como disparador de la autenticación:
-        binding.lottieFingerprint?.setOnClickListener {
-            startBiometricAuth()
+        // TextWatchers para validación en tiempo real
+        val tw = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                validateForm()
+            }
+            override fun afterTextChanged(s: Editable?) {}
         }
+        binding.etEmail.addTextChangedListener(tw)
+        binding.etPassword.addTextChangedListener(tw)
+
+        // Acciones botones
+        binding.btnLogin.setOnClickListener { doLogin() }
+        binding.tvRegister.setOnClickListener { doRegister() }
+
+        // Manejo "done" en teclado
+        binding.etPassword.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE && binding.btnLogin.isEnabled) {
+                doLogin()
+                true
+            } else false
+        }
+
+        // Inicial
+        validateForm()
     }
 
-    private fun setupBiometric() {
-        executor = ContextCompat.getMainExecutor(this)
-        val biometricManager = BiometricManager.from(this)
+    private fun validateForm() {
+        val email = binding.etEmail.text.toString().trim()
+        val password = binding.etPassword.text.toString().trim()
 
-        val canAuth = biometricManager.canAuthenticate(authenticators)
+        // Email válido básico
+        val emailOk = email.isNotEmpty() && Patterns.EMAIL_ADDRESS.matcher(email).matches()
 
-        // Si aquí no es SUCCESS, lo manejamos luego en startBiometricAuth()
-        if (canAuth != BiometricManager.BIOMETRIC_SUCCESS) {
+        // Password: solo números y entre 6 y 10 dígitos
+        val passwordOk = password.matches(Regex("^\\d{6,10}\$"))
+
+        // Mensaje de error en tiempo real
+        if (password.isNotEmpty() && password.length < 6) {
+            binding.tilPassword.error = "Mínimo 6 dígitos"
+        } else {
+            binding.tilPassword.error = null
+        }
+
+        binding.btnLogin.isEnabled = emailOk && passwordOk
+        // "Registrarse" visible/activo solo si campos completos
+        binding.tvRegister.isEnabled = emailOk && passwordOk
+        binding.tvRegister.alpha = if (binding.tvRegister.isEnabled) 1f else 0.6f
+    }
+
+    private fun doLogin() {
+        val email = binding.etEmail.text.toString().trim()
+        val password = binding.etPassword.text.toString().trim()
+
+        // Mostrar loading simple
+        binding.progressBar.alpha = 1f
+        binding.progressBar.isIndeterminate = true
+        binding.btnLogin.isEnabled = false
+
+        auth.signInWithEmailAndPassword(email, password)
+            .addOnCompleteListener { task ->
+                binding.progressBar.alpha = 0f
+                binding.btnLogin.isEnabled = true
+
+                if (task.isSuccessful) {
+                    // Login exitoso
+                    onAuthSuccess()
+                } else {
+                    // Login incorrecto
+                    Toast.makeText(this, "Login incorrecto", Toast.LENGTH_SHORT).show()
+                }
+            }
+    }
+
+    private fun doRegister() {
+        val email = binding.etEmail.text.toString().trim()
+        val password = binding.etPassword.text.toString().trim()
+
+        // Guardamos con FirebaseAuth
+        binding.progressBar.alpha = 1f
+        binding.progressBar.isIndeterminate = true
+        binding.tvRegister.isEnabled = false
+
+        auth.createUserWithEmailAndPassword(email, password)
+            .addOnCompleteListener { task ->
+                binding.progressBar.alpha = 0f
+                binding.tvRegister.isEnabled = true
+
+                if (task.isSuccessful) {
+                    // Registro exitoso
+                    onAuthSuccess(isRegistration = true)
+                } else {
+                    // Error en el registro
+                    Toast.makeText(this, "Error en el registro", Toast.LENGTH_SHORT).show()
+                }
+            }
+    }
+
+    private fun onAuthSuccess(isRegistration: Boolean = false) {
+        val fromWidget = intent.getBooleanExtra("fromWidget", false)
+
+        if (fromWidget) {
+            // Si vino desde el widget, solo avisamos al widget para que se actualice y cerramos
+            val refresh = Intent().apply {
+                action = ACTION_REFRESH
+                setClass(this@LoginActivity, InventoryWidget::class.java)
+            }
+            sendBroadcast(refresh)
+            // Cerramos para que el usuario vuelva al launcher / widget
+            finish()
             return
         }
 
-        biometricPrompt = BiometricPrompt(
-            this,
-            executor,
-            object : BiometricPrompt.AuthenticationCallback() {
-
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    super.onAuthenticationSucceeded(result)
-                    goToHome()
-                }
-
-                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    super.onAuthenticationError(errorCode, errString)
-                    Toast.makeText(
-                        this@LoginActivity,
-                        getString(R.string.login_biometric_error),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-
-                override fun onAuthenticationFailed() {
-                    super.onAuthenticationFailed()
-                    Toast.makeText(
-                        this@LoginActivity,
-                        getString(R.string.login_biometric_failed),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        )
-
-        // PromptInfo: título y subtítulo del diálogo del sistema
-        // (cuando usamos DEVICE_CREDENTIAL NO se puede usar setNegativeButtonText)
-        promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle(getString(R.string.title_login))
-            .setSubtitle(getString(R.string.login_subtitle_device))
-            .setAllowedAuthenticators(authenticators)
-            .build()
-    }
-
-    private fun startBiometricAuth() {
-        val biometricManager = BiometricManager.from(this)
-        val canAuth = biometricManager.canAuthenticate(authenticators)
-
-        if (canAuth == BiometricManager.BIOMETRIC_SUCCESS) {
-            biometricPrompt.authenticate(promptInfo)
-        } else {
-            // No hay PIN / patrón / contraseña / huella configurados → obligamos a ir a ajustes
-            showNeedDeviceLockDialog()
-        }
-    }
-
-    private fun showNeedDeviceLockDialog() {
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.title_login))
-            .setMessage(getString(R.string.login_need_device_lock))
-            .setPositiveButton(getString(R.string.login_go_to_settings)) { _, _ ->
-                openSecuritySettings()
-            }
-            .setNegativeButton(getString(R.string.cancel), null)
-            .show()
-    }
-
-    private fun openSecuritySettings() {
-        try {
-            val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                // Android 11+ → pantalla de enrolamiento biométrico / credenciales
-                Intent(Settings.ACTION_BIOMETRIC_ENROLL).apply {
-                    putExtra(
-                        Settings.EXTRA_BIOMETRIC_AUTHENTICATORS_ALLOWED,
-                        authenticators
-                    )
-                }
-            } else {
-                // Versiones anteriores → pantalla de seguridad general
-                Intent(Settings.ACTION_SECURITY_SETTINGS)
-            }
-
-            startActivity(intent)
-        } catch (e: Exception) {
-            Toast.makeText(
-                this,
-                getString(R.string.login_biometric_not_available),
-                Toast.LENGTH_LONG
-            ).show()
-        }
-    }
-
-    private fun goToHome() {
-        val intent = Intent(this, MainActivity::class.java).apply {
-            // Limpiar backstack de login
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        startActivity(intent)
+        // Si vino desde la app: abrir MainActivity (Home)
+        startActivity(Intent(this, MainActivity::class.java))
         finish()
     }
 }
