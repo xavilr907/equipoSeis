@@ -25,4 +25,8 @@ interface ProductDao {
     // Suma simple del precio (sin quantity por ahora)
     @Query("SELECT SUM(priceCents) FROM products")
     suspend fun getTotalInventoryValue(): Long?
+
+    // ---------- NUEVO: leer todos los productos una sola vez (para widget) ----------
+    @Query("SELECT * FROM products ORDER BY name ASC")
+    suspend fun observeAllOnce(): List<ProductEntity>
 }

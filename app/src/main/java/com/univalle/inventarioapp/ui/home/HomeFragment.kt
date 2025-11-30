@@ -1,5 +1,6 @@
 package com.univalle.inventarioapp.ui.home
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.*
@@ -34,23 +35,22 @@ class HomeFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // habilita el menú en este fragment
-        setHasOptionsMenu(true)
+        setHasOptionsMenu(true) // habilita menú en el fragment
     }
 
     override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
+        inflater: android.view.LayoutInflater,
+        container: android.view.ViewGroup?,
         savedInstanceState: Bundle?
-    ): View {
+    ): android.view.View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         return binding.root
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // usar la toolbar del fragmento como ActionBar
+        // Toolbar
         (requireActivity() as AppCompatActivity).setSupportActionBar(binding.toolbarHome)
 
         // RecyclerView
@@ -68,6 +68,7 @@ class HomeFragment : Fragment() {
         val factory = HomeViewModelFactory(db.productDao())
         vm = ViewModelProvider(this, factory)[HomeViewModel::class.java]
 
+        // Observers
         vm.products.observe(viewLifecycleOwner) { list ->
             binding.progressHome.visibility = View.GONE
             adapter.submitList(list)
@@ -75,15 +76,19 @@ class HomeFragment : Fragment() {
 
         vm.totalFormatted.observe(viewLifecycleOwner) { total ->
             binding.tvTotalInventory.text = "Total inventario: $total"
+
+            // --- NUEVO: Guardar total en SharedPreferences para el widget ---
+            val prefs = requireContext().getSharedPreferences("inventory_widget_prefs", Context.MODE_PRIVATE)
+            prefs.edit().putString("totalInventory", total).apply()
         }
 
+        // FAB agregar producto
         binding.fabAdd.setOnClickListener {
             findNavController().navigate(R.id.action_homeFragment_to_addProductFragment)
         }
     }
 
-    // ---- MENÚ (icono cerrar sesión) ----
-
+    // Menú cerrar sesión
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         inflater.inflate(R.menu.menu_home, menu)
         super.onCreateOptionsMenu(menu, inflater)
@@ -92,13 +97,10 @@ class HomeFragment : Fragment() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_logout -> {
-                // 1) CERRAR sesión en Firebase
                 FirebaseAuth.getInstance().signOut()
-
-                // 2) Ir al Login y limpiar el back stack
                 val intent = Intent(requireContext(), LoginActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    putExtra("fromWidget", false) // indicamos origen (no es widget)
+                    putExtra("fromWidget", false)
                 }
                 startActivity(intent)
                 true

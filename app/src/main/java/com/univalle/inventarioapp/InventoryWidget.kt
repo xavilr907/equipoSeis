@@ -8,9 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import java.text.NumberFormat
-import java.util.Locale
 
 class InventoryWidget : AppWidgetProvider() {
 
@@ -38,29 +35,21 @@ class InventoryWidget : AppWidgetProvider() {
             ACTION_TOGGLE -> {
                 val user = FirebaseAuth.getInstance().currentUser
                 if (user == null) {
-                    // No hay sesión -> abrir login y salir
                     openLogin(context)
                     return
                 }
-                // Solo alternamos si hay sesión
                 val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 val current = prefs.getBoolean(KEY_HIDDEN, true)
                 prefs.edit().putBoolean(KEY_HIDDEN, !current).apply()
-                // refrescar widgets
                 onUpdate(context, manager, ids)
             }
 
             ACTION_GESTIONAR -> {
                 val user = FirebaseAuth.getInstance().currentUser
-                if (user == null) {
-                    openLogin(context)
-                } else {
-                    openHome(context)
-                }
+                if (user == null) openLogin(context) else openHome(context)
             }
 
             ACTION_REFRESH -> {
-                // Forzar actualización (ej: tras login)
                 onUpdate(context, manager, ids)
             }
         }
@@ -69,7 +58,7 @@ class InventoryWidget : AppWidgetProvider() {
     private fun updateSingleWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
         val views = RemoteViews(context.packageName, R.layout.inventory_widget)
 
-        // PendingIntent: toggle (ojo)
+        // Toggle (ojo)
         val toggleIntent = Intent(context, InventoryWidget::class.java).apply { action = ACTION_TOGGLE }
         val togglePI = PendingIntent.getBroadcast(
             context, 100, toggleIntent,
@@ -77,7 +66,7 @@ class InventoryWidget : AppWidgetProvider() {
         )
         views.setOnClickPendingIntent(R.id.btnToggle, togglePI)
 
-        // PendingIntent: gestionar (texto + icono)
+        // Gestionar inventario
         val gestionarIntent = Intent(context, InventoryWidget::class.java).apply { action = ACTION_GESTIONAR }
         val gestionarPI = PendingIntent.getBroadcast(
             context, 101, gestionarIntent,
@@ -86,62 +75,28 @@ class InventoryWidget : AppWidgetProvider() {
         views.setOnClickPendingIntent(R.id.imgGestionar, gestionarPI)
         views.setOnClickPendingIntent(R.id.txtGestionar, gestionarPI)
 
-        // Chequear preferencias para ocultar/mostrar
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val isHiddenPref = prefs.getBoolean(KEY_HIDDEN, true)
 
-        // Chequear sesión
         val user = FirebaseAuth.getInstance().currentUser
-        if (user == null) {
-            // NO logueado: mostrar asteriscos y ojo cerrado
+        if (user == null || isHiddenPref) {
+            // No hay sesión o está oculto: asteriscos
             views.setTextViewText(R.id.txtSaldo, "$ ****")
             views.setImageViewResource(R.id.btnToggle, R.drawable.cerrado)
+            views.setTextColor(R.id.txtSaldo, 0xFFFFFFFF.toInt()) // blanco
             appWidgetManager.updateAppWidget(appWidgetId, views)
             return
         }
 
-        // Si hay sesión y pref indica oculto -> ojo cerrado + asteriscos
-        if (isHiddenPref) {
-            views.setTextViewText(R.id.txtSaldo, "$ ****")
-            views.setImageViewResource(R.id.btnToggle, R.drawable.cerrado)
-            appWidgetManager.updateAppWidget(appWidgetId, views)
-            return
-        }
-
-        // Si hay sesión y no está oculto -> mostramos saldo real (ojo abierto) leyendo Firestore
+        // Hay sesión y no está oculto -> mostrar total del inventario
         views.setImageViewResource(R.id.btnToggle, R.drawable.abierto)
-        appWidgetManager.updateAppWidget(appWidgetId, views) // primero actualizar UI mínima
 
-        FirebaseFirestore.getInstance()
-            .collection("products")
-            .get()
-            .addOnSuccessListener { snapshot ->
-                var total = 0.0
-                for (doc in snapshot.documents) {
-                    val price = when {
-                        doc.contains("price") -> doc.getDouble("price") ?: 0.0
-                        doc.contains("priceCents") -> (doc.getLong("priceCents")
-                            ?: 0L) / 100.0
-                        else -> 0.0
-                    }
-                    val qty = doc.getLong("quantity") ?: 0L
-                    total += price * qty
-                }
+        // Leer total desde SharedPreferences (el que se guardó en HomeFragment)
+        val total = prefs.getString("totalInventory", "$ ****") ?: "$ ****"
+        views.setTextViewText(R.id.txtSaldo, total)
+        views.setTextColor(R.id.txtSaldo, 0xFFFFFFFF.toInt()) // blanco
 
-                // Formateo para: 3.326.000,00
-                val nf = NumberFormat.getNumberInstance(Locale("es", "CO")).apply {
-                    maximumFractionDigits = 2
-                    minimumFractionDigits = 2
-                }
-                val formatted = "$ " + nf.format(total)
-
-                views.setTextViewText(R.id.txtSaldo, formatted)
-                appWidgetManager.updateAppWidget(appWidgetId, views)
-            }
-            .addOnFailureListener {
-                views.setTextViewText(R.id.txtSaldo, "$ ****")
-                appWidgetManager.updateAppWidget(appWidgetId, views)
-            }
+        appWidgetManager.updateAppWidget(appWidgetId, views)
     }
 
     private fun openLogin(context: Context) {
@@ -158,5 +113,10 @@ class InventoryWidget : AppWidgetProvider() {
             putExtra("fromWidget", true)
         }
         context.startActivity(i)
+    }
+
+    // Extension para RemoteViews: cambiar color de texto
+    private fun RemoteViews.setTextColor(viewId: Int, color: Int) {
+        this.setTextColor(viewId, color)
     }
 }
