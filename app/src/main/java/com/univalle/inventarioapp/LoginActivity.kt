@@ -23,46 +23,42 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityLoginBinding.inflate(layoutInflater)
-        setContentView(binding.root)
 
         auth = FirebaseAuth.getInstance()
+        binding = ActivityLoginBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         // Limitar email a 40 caracteres
         binding.etEmail.filters = arrayOf(InputFilter.LengthFilter(40))
 
-        // Password solo números: podemos controlar con InputType en XML, pero validamos aquí también
         // Mostrar/ocultar contraseña
         binding.ivTogglePassword.setOnClickListener {
             val isVisible = binding.etPassword.transformationMethod == null
             if (isVisible) {
-                // actualmente visible -> ocultar
-                binding.etPassword.transformationMethod = android.text.method.PasswordTransformationMethod.getInstance()
-                binding.ivTogglePassword.setImageResource(R.drawable.cerrado) // adapta tu drawable
+                binding.etPassword.transformationMethod =
+                    android.text.method.PasswordTransformationMethod.getInstance()
+                binding.ivTogglePassword.setImageResource(R.drawable.cerrado)
             } else {
                 binding.etPassword.transformationMethod = null
-                binding.ivTogglePassword.setImageResource(R.drawable.abierto) // adapta tu drawable
+                binding.ivTogglePassword.setImageResource(R.drawable.abierto)
             }
-            // mover cursor al final
             binding.etPassword.setSelection(binding.etPassword.text?.length ?: 0)
         }
 
-        // TextWatchers para validación en tiempo real
-        val tw = object : TextWatcher {
+        // Validaciones en tiempo real
+        val watcher = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 validateForm()
             }
             override fun afterTextChanged(s: Editable?) {}
         }
-        binding.etEmail.addTextChangedListener(tw)
-        binding.etPassword.addTextChangedListener(tw)
+        binding.etEmail.addTextChangedListener(watcher)
+        binding.etPassword.addTextChangedListener(watcher)
 
-        // Acciones botones
         binding.btnLogin.setOnClickListener { doLogin() }
         binding.tvRegister.setOnClickListener { doRegister() }
 
-        // Manejo "done" en teclado
         binding.etPassword.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE && binding.btnLogin.isEnabled) {
                 doLogin()
@@ -70,7 +66,6 @@ class LoginActivity : AppCompatActivity() {
             } else false
         }
 
-        // Inicial
         validateForm()
     }
 
@@ -78,13 +73,9 @@ class LoginActivity : AppCompatActivity() {
         val email = binding.etEmail.text.toString().trim()
         val password = binding.etPassword.text.toString().trim()
 
-        // Email válido básico
         val emailOk = email.isNotEmpty() && Patterns.EMAIL_ADDRESS.matcher(email).matches()
-
-        // Password: solo números y entre 6 y 10 dígitos
         val passwordOk = password.matches(Regex("^\\d{6,10}\$"))
 
-        // Mensaje de error en tiempo real
         if (password.isNotEmpty() && password.length < 6) {
             binding.tilPassword.error = "Mínimo 6 dígitos"
         } else {
@@ -92,7 +83,6 @@ class LoginActivity : AppCompatActivity() {
         }
 
         binding.btnLogin.isEnabled = emailOk && passwordOk
-        // "Registrarse" visible/activo solo si campos completos
         binding.tvRegister.isEnabled = emailOk && passwordOk
         binding.tvRegister.alpha = if (binding.tvRegister.isEnabled) 1f else 0.6f
     }
@@ -101,7 +91,6 @@ class LoginActivity : AppCompatActivity() {
         val email = binding.etEmail.text.toString().trim()
         val password = binding.etPassword.text.toString().trim()
 
-        // Mostrar loading simple
         binding.progressBar.alpha = 1f
         binding.progressBar.isIndeterminate = true
         binding.btnLogin.isEnabled = false
@@ -112,10 +101,8 @@ class LoginActivity : AppCompatActivity() {
                 binding.btnLogin.isEnabled = true
 
                 if (task.isSuccessful) {
-                    // Login exitoso
                     onAuthSuccess()
                 } else {
-                    // Login incorrecto
                     Toast.makeText(this, "Login incorrecto", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -125,7 +112,6 @@ class LoginActivity : AppCompatActivity() {
         val email = binding.etEmail.text.toString().trim()
         val password = binding.etPassword.text.toString().trim()
 
-        // Guardamos con FirebaseAuth
         binding.progressBar.alpha = 1f
         binding.progressBar.isIndeterminate = true
         binding.tvRegister.isEnabled = false
@@ -136,10 +122,8 @@ class LoginActivity : AppCompatActivity() {
                 binding.tvRegister.isEnabled = true
 
                 if (task.isSuccessful) {
-                    // Registro exitoso
                     onAuthSuccess(isRegistration = true)
                 } else {
-                    // Error en el registro
                     Toast.makeText(this, "Error en el registro", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -149,18 +133,23 @@ class LoginActivity : AppCompatActivity() {
         val fromWidget = intent.getBooleanExtra("fromWidget", false)
 
         if (fromWidget) {
-            // Si vino desde el widget, solo avisamos al widget para que se actualice y cerramos
+            // Avisar al widget que ya hay sesión
             val refresh = Intent().apply {
                 action = ACTION_REFRESH
                 setClass(this@LoginActivity, InventoryWidget::class.java)
             }
             sendBroadcast(refresh)
-            // Cerramos para que el usuario vuelva al launcher / widget
-            finish()
+
+            // Abrir la app (pantalla principal)
+            val homeIntent = Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            startActivity(homeIntent)
+
             return
         }
 
-        // Si vino desde la app: abrir MainActivity (Home)
+        // Si NO viene desde el widget -> flujo normal
         startActivity(Intent(this, MainActivity::class.java))
         finish()
     }

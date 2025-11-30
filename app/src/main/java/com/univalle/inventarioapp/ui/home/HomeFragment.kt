@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.room.Room
+import com.google.firebase.auth.FirebaseAuth
 import com.univalle.inventarioapp.LoginActivity
 import com.univalle.inventarioapp.R
 import com.univalle.inventarioapp.data.local.AppDatabase
@@ -91,9 +92,13 @@ class HomeFragment : Fragment() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_logout -> {
-                // Ir al Login y limpiar el back stack
+                // 1) CERRAR sesión en Firebase
+                FirebaseAuth.getInstance().signOut()
+
+                // 2) Ir al Login y limpiar el back stack
                 val intent = Intent(requireContext(), LoginActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    putExtra("fromWidget", false) // indicamos origen (no es widget)
                 }
                 startActivity(intent)
                 true
