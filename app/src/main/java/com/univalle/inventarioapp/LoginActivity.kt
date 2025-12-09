@@ -3,21 +3,34 @@ package com.univalle.inventarioapp
 import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
-import android.text.InputFilter
 import android.text.TextWatcher
-import android.util.Patterns
-import android.view.inputmethod.EditorInfo
+import android.view.View
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import com.google.firebase.auth.FirebaseAuth
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.univalle.inventarioapp.databinding.ActivityLoginBinding
+import com.univalle.inventarioapp.ui.auth.AuthViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
+/**
+ * Activity de Login y Registro con arquitectura MVVM.
+ * Implementa HU2 con validación en tiempo real, estados visuales y navegación.
+ *
+ * Criterios de Aceptación:
+ * - Fondo negro, sin Toolbar
+ * - Email: Max 40 chars, hint blanco flotante
+ * - Password: Solo números (6-10 dígitos), validación en tiempo real con borde rojo/blanco
+ * - Botón Login: Naranja (habilitado) / Gris (deshabilitado)
+ * - Botón Registro: Texto gris, mismas reglas de habilitación
+ */
 @AndroidEntryPoint
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
-    private lateinit var auth: FirebaseAuth
+    private val viewModel: AuthViewModel by viewModels()
 
     companion object {
         const val ACTION_REFRESH = "com.univalle.inventarioapp.ACTION_REFRESH_WIDGET"
@@ -26,112 +39,95 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        auth = FirebaseAuth.getInstance()
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Limitar email a 40 caracteres
-        binding.etEmail.filters = arrayOf(InputFilter.LengthFilter(40))
+        setupUI()
+        observeViewModel()
+    }
 
-        // Mostrar/ocultar contraseña
-        binding.ivTogglePassword.setOnClickListener {
-            val isVisible = binding.etPassword.transformationMethod == null
-            if (isVisible) {
-                binding.etPassword.transformationMethod =
-                    android.text.method.PasswordTransformationMethod.getInstance()
-                binding.ivTogglePassword.setImageResource(R.drawable.cerrado)
-            } else {
-                binding.etPassword.transformationMethod = null
-                binding.ivTogglePassword.setImageResource(R.drawable.abierto)
-            }
-            binding.etPassword.setSelection(binding.etPassword.text?.length ?: 0)
-        }
-
-        // Validaciones en tiempo real
-        val watcher = object : TextWatcher {
+    /**
+     * Configura listeners de la UI (TextWatchers, clicks).
+     */
+    private fun setupUI() {
+        // TextWatcher para Email
+        binding.etEmail.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                validateForm()
+                viewModel.onEmailChanged(s.toString())
             }
             override fun afterTextChanged(s: Editable?) {}
-        }
-        binding.etEmail.addTextChangedListener(watcher)
-        binding.etPassword.addTextChangedListener(watcher)
+        })
 
-        binding.btnLogin.setOnClickListener { doLogin() }
-        binding.tvRegister.setOnClickListener { doRegister() }
-
-        binding.etPassword.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_DONE && binding.btnLogin.isEnabled) {
-                doLogin()
-                true
-            } else false
-        }
-
-        validateForm()
-    }
-
-    private fun validateForm() {
-        val email = binding.etEmail.text.toString().trim()
-        val password = binding.etPassword.text.toString().trim()
-
-        val emailOk = email.isNotEmpty() && Patterns.EMAIL_ADDRESS.matcher(email).matches()
-        val passwordOk = password.matches(Regex("^\\d{6,10}\$"))
-
-        if (password.isNotEmpty() && password.length < 6) {
-            binding.tilPassword.error = "Mínimo 6 dígitos"
-        } else {
-            binding.tilPassword.error = null
-        }
-
-        binding.btnLogin.isEnabled = emailOk && passwordOk
-        binding.tvRegister.isEnabled = emailOk && passwordOk
-        binding.tvRegister.alpha = if (binding.tvRegister.isEnabled) 1f else 0.6f
-    }
-
-    private fun doLogin() {
-        val email = binding.etEmail.text.toString().trim()
-        val password = binding.etPassword.text.toString().trim()
-
-        binding.progressBar.alpha = 1f
-        binding.progressBar.isIndeterminate = true
-        binding.btnLogin.isEnabled = false
-
-        auth.signInWithEmailAndPassword(email, password)
-            .addOnCompleteListener { task ->
-                binding.progressBar.alpha = 0f
-                binding.btnLogin.isEnabled = true
-
-                if (task.isSuccessful) {
-                    onAuthSuccess()
-                } else {
-                    Toast.makeText(this, "Login incorrecto", Toast.LENGTH_SHORT).show()
-                }
+        // TextWatcher para Password (validación en tiempo real)
+        binding.etPassword.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                viewModel.onPasswordChanged(s.toString())
             }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
+        // Click en botón Login
+        binding.btnLogin.setOnClickListener {
+            viewModel.login(
+                onSuccess = { navigateToHome() },
+                onError = { message -> showToast(message) }
+            )
+        }
+
+        // Click en TextView Registro
+        binding.tvRegister.setOnClickListener {
+            viewModel.register(
+                onSuccess = { navigateToHome() },
+                onError = { message -> showToast(message) }
+            )
+        }
     }
 
-    private fun doRegister() {
-        val email = binding.etEmail.text.toString().trim()
-        val password = binding.etPassword.text.toString().trim()
-
-        binding.progressBar.alpha = 1f
-        binding.progressBar.isIndeterminate = true
-        binding.tvRegister.isEnabled = false
-
-        auth.createUserWithEmailAndPassword(email, password)
-            .addOnCompleteListener { task ->
-                binding.progressBar.alpha = 0f
-                binding.tvRegister.isEnabled = true
-
-                if (task.isSuccessful) {
-                    onAuthSuccess(isRegistration = true)
-                } else {
-                    Toast.makeText(this, "Error en el registro", Toast.LENGTH_SHORT).show()
+    /**
+     * Observa cambios en el StateFlow del ViewModel y actualiza la UI.
+     */
+    private fun observeViewModel() {
+        lifecycleScope.launch {
+            viewModel.uiState.collect { state ->
+                // Actualizar texto de Email (si el ViewModel lo sanitiza)
+                if (binding.etEmail.text.toString() != state.email) {
+                    binding.etEmail.setText(state.email)
+                    binding.etEmail.setSelection(state.email.length)
                 }
+
+                // Actualizar texto de Password (solo números, max 10)
+                if (binding.etPassword.text.toString() != state.password) {
+                    binding.etPassword.setText(state.password)
+                    binding.etPassword.setSelection(state.password.length)
+                }
+
+                // Mostrar error de password en tiempo real (criterio 4)
+                binding.tilPassword.error = state.passwordError
+
+                // Cambiar color del borde según error (rojo si hay error, blanco si no)
+                if (state.passwordError != null) {
+                    binding.tilPassword.boxStrokeColor = ContextCompat.getColor(this@LoginActivity, R.color.error_red)
+                } else {
+                    binding.tilPassword.boxStrokeColor = ContextCompat.getColor(this@LoginActivity, R.color.white)
+                }
+
+                // Habilitar/deshabilitar botones según validación (criterios 6 y 7)
+                binding.btnLogin.isEnabled = state.isFormValid && !state.isLoading
+                binding.tvRegister.isEnabled = state.isFormValid && !state.isLoading
+                binding.tvRegister.alpha = if (state.isFormValid && !state.isLoading) 1f else 0.6f
+
+                // Mostrar/ocultar ProgressBar
+                binding.progressBar.visibility = if (state.isLoading) View.VISIBLE else View.GONE
             }
+        }
     }
 
-    private fun onAuthSuccess(isRegistration: Boolean = false) {
+    /**
+     * Navega a MainActivity (Home - HU3).
+     */
+    private fun navigateToHome() {
         val fromWidget = intent.getBooleanExtra("fromWidget", false)
 
         if (fromWidget) {
@@ -141,18 +137,20 @@ class LoginActivity : AppCompatActivity() {
                 setClass(this@LoginActivity, InventoryWidget::class.java)
             }
             sendBroadcast(refresh)
-
-            // Abrir la app (pantalla principal)
-            val homeIntent = Intent(this, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            }
-            startActivity(homeIntent)
-
-            return
         }
 
-        // Si NO viene desde el widget -> flujo normal
-        startActivity(Intent(this, MainActivity::class.java))
+        // Navegar a Home con flags para limpiar stack
+        val homeIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(homeIntent)
         finish()
+    }
+
+    /**
+     * Muestra un Toast con el mensaje especificado.
+     */
+    private fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 }
