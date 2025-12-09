@@ -1,6 +1,5 @@
 package com.univalle.inventarioapp.ui.home
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.*
@@ -108,14 +107,6 @@ class HomeFragment : Fragment() {
             adapter.submitList(list)
         }
 
-        // Observar total formateado
-        vm.totalFormatted.observe(viewLifecycleOwner) { total ->
-            binding.tvTotalInventory.text = "Total inventario: $total"
-
-            // Guardar total en SharedPreferences para el widget
-            val prefs = requireContext().getSharedPreferences("inventory_widget_prefs", Context.MODE_PRIVATE)
-            prefs.edit().putString("totalInventory", total).apply()
-        }
 
         // CRITERIO 7: FAB agregar producto
         binding.fabAdd.setOnClickListener {

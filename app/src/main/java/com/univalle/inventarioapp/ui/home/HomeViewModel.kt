@@ -14,8 +14,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
-import java.text.NumberFormat
-import java.util.Locale
 import javax.inject.Inject
 
 /**
@@ -51,16 +49,6 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    // Calcula el total del inventario en centavos
-    val totalCents: LiveData<Long> = products.map { list ->
-        list.fold(0L) { acc, p -> acc + (p.priceCents * p.quantity.toLong()) }
-    }
-
-    // Formatea el total como moneda
-    val totalFormatted: LiveData<String> = totalCents.map { cents ->
-        val units = cents / 100.0
-        NumberFormat.getCurrencyInstance(Locale.getDefault()).format(units)
-    }
 
     init {
         observeProducts()
