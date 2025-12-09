@@ -116,6 +116,15 @@ class LoginActivity : AppCompatActivity() {
                 // Habilitar/deshabilitar botones según validación (criterios 6 y 7)
                 binding.btnLogin.isEnabled = state.isFormValid && !state.isLoading
                 binding.tvRegister.isEnabled = state.isFormValid && !state.isLoading
+
+                // Criterio 12: Cambiar color a blanco bold cuando se habilita
+                binding.tvRegister.setTextColor(
+                    if (state.isFormValid && !state.isLoading) {
+                        ContextCompat.getColor(this@LoginActivity, R.color.white)
+                    } else {
+                        ContextCompat.getColor(this@LoginActivity, R.color.text_gray)
+                    }
+                )
                 binding.tvRegister.alpha = if (state.isFormValid && !state.isLoading) 1f else 0.6f
 
                 // Mostrar/ocultar ProgressBar
