@@ -7,14 +7,15 @@ plugins {
 
     // Firebase (Google Services plugin)
     id("com.google.gms.google-services")
+
+    // Dagger Hilt
+    id("com.google.dagger.hilt.android")
 }
 
 android {
     namespace = "com.univalle.inventarioapp"
 
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.univalle.inventarioapp"
@@ -77,9 +78,22 @@ dependencies {
     implementation("com.airbnb.android:lottie:6.4.0")
 
     // ================================
+    // DAGGER HILT (INYECCIÓN DE DEPENDENCIAS)
+    // ================================
+    implementation("com.google.dagger:hilt-android:2.51.1")
+    kapt("com.google.dagger:hilt-android-compiler:2.51.1")
+
+    // ================================
     // TESTING
     // ================================
     testImplementation(libs.junit)
+    testImplementation("org.mockito:mockito-core:5.7.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.1.0")
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+    testImplementation("com.google.dagger:hilt-android-testing:2.51.1")
+    kaptTest("com.google.dagger:hilt-android-compiler:2.51.1")
+
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
