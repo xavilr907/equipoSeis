@@ -8,4 +8,9 @@
     <color name="toolbar_gray">#424242</color>         <!-- Toolbar -->
     <color name="orange_primary">#F76B3F</color>       <!-- Botón / FAB naranja -->
     <color name="total_orange">#E64A19</color>         <!-- color para precio/total -->
+
+    <!-- Colores para Login (HU2) -->
+    <color name="gray_disabled">#808080</color>        <!-- Botón deshabilitado -->
+    <color name="error_red">#FF0000</color>            <!-- Error de validación -->
+    <color name="text_gray">#9EA1A1</color>            <!-- Texto del botón Registro -->
 </resources>
