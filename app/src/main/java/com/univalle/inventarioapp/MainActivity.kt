@@ -1,35 +1,38 @@
 package com.univalle.inventarioapp
 
+import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.auth.FirebaseAuth
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+    }
 
-        // ===== PRUEBA RÁPIDA DE FIRESTORE =====
-        val db = Firebase.firestore
+    override fun onStart() {
+        super.onStart()
 
-        val testProduct = hashMapOf(
-            "code" to "0001",
-            "name" to "Producto Prueba",
-            "priceCents" to 1500,   // int/long
-            "quantity" to 5         // int
-        )
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser
 
-        db.collection("products")
-            .add(testProduct)
-            .addOnSuccessListener { doc ->
-                Log.d("FIREBASE_TEST", "Guardado con id: ${doc.id}")
+        val fromWidget = intent.getBooleanExtra("fromWidget", false)
+
+        // CRITERIO 1 HU3: Persistencia de sesión
+        // Si no hay usuario, enviarlo al login
+        if (user == null) {
+            val loginIntent = Intent(this, LoginActivity::class.java).apply {
+                putExtra("fromWidget", fromWidget)
             }
-            .addOnFailureListener { e ->
-                Log.e("FIREBASE_TEST", "Error: ${e.message}", e)
-            }
-        // ======================================
+            startActivity(loginIntent)
+            finish()
+            return
+        }
+
+        // Si está logueado, continúa con HomeFragment (nav_graph.xml)
     }
 }

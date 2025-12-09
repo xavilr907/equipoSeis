@@ -3,7 +3,9 @@ package com.univalle.inventarioapp
 import android.app.Application
 import androidx.room.Room
 import com.univalle.inventarioapp.data.local.AppDatabase
+import dagger.hilt.android.HiltAndroidApp
 
+@HiltAndroidApp
 class App : Application() {
 
     companion object {

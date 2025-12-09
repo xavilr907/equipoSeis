@@ -7,130 +7,116 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
-import com.google.firebase.firestore.FirebaseFirestore
-import java.text.NumberFormat
-import java.util.Locale
+import com.google.firebase.auth.FirebaseAuth
 
 class InventoryWidget : AppWidgetProvider() {
 
     companion object {
-        private const val ACTION_TOGGLE_VISIBILITY =
-            "com.univalle.inventarioapp.action.TOGGLE_WIDGET_VISIBILITY"
-
-        private const val PREFS_NAME = "inventory_widget_prefs"
-        private const val KEY_IS_HIDDEN = "is_hidden"
+        private const val ACTION_TOGGLE = "com.univalle.inventarioapp.ACTION_TOGGLE_SALDO"
+        private const val ACTION_GESTIONAR = "com.univalle.inventarioapp.ACTION_GESTIONAR"
+        private const val ACTION_REFRESH = "com.univalle.inventarioapp.ACTION_REFRESH_WIDGET"
+        private const val PREFS = "inventory_widget_prefs"
+        private const val KEY_HIDDEN = "is_hidden"
     }
 
-    override fun onUpdate(
-        context: Context,
-        appWidgetManager: AppWidgetManager,
-        appWidgetIds: IntArray
-    ) {
-        for (id in appWidgetIds) {
-            updateSingleWidget(context, appWidgetManager, id)
-        }
+    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        for (id in appWidgetIds) updateSingleWidget(context, appWidgetManager, id)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
 
-        when (intent.action) {
-            ACTION_TOGGLE_VISIBILITY -> {
-                val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                val current = prefs.getBoolean(KEY_IS_HIDDEN, true)
-                prefs.edit().putBoolean(KEY_IS_HIDDEN, !current).apply()
+        val action = intent.action
+        val manager = AppWidgetManager.getInstance(context)
+        val thisWidget = ComponentName(context, InventoryWidget::class.java)
+        val ids = manager.getAppWidgetIds(thisWidget)
 
-                val manager = AppWidgetManager.getInstance(context)
-                val thisWidget = ComponentName(context, InventoryWidget::class.java)
-                val ids = manager.getAppWidgetIds(thisWidget)
+        when (action) {
+            ACTION_TOGGLE -> {
+                val user = FirebaseAuth.getInstance().currentUser
+                if (user == null) {
+                    openLogin(context)
+                    return
+                }
+                val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                val current = prefs.getBoolean(KEY_HIDDEN, true)
+                prefs.edit().putBoolean(KEY_HIDDEN, !current).apply()
+                onUpdate(context, manager, ids)
+            }
+
+            ACTION_GESTIONAR -> {
+                val user = FirebaseAuth.getInstance().currentUser
+                if (user == null) openLogin(context) else openHome(context)
+            }
+
+            ACTION_REFRESH -> {
                 onUpdate(context, manager, ids)
             }
         }
     }
 
-    private fun updateSingleWidget(
-        context: Context,
-        appWidgetManager: AppWidgetManager,
-        appWidgetId: Int
-    ) {
+    private fun updateSingleWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
         val views = RemoteViews(context.packageName, R.layout.inventory_widget)
 
-        // ---------------------------
-        // INTENTO: Toggle del ojo
-        // ---------------------------
-        val toggleIntent = Intent(context, InventoryWidget::class.java).apply {
-            action = ACTION_TOGGLE_VISIBILITY
-        }
-        val togglePendingIntent = PendingIntent.getBroadcast(
-            context,
-            0,
-            toggleIntent,
+        // Toggle (ojo)
+        val toggleIntent = Intent(context, InventoryWidget::class.java).apply { action = ACTION_TOGGLE }
+        val togglePI = PendingIntent.getBroadcast(
+            context, 100, toggleIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        views.setOnClickPendingIntent(R.id.btnToggle, togglePendingIntent)
+        views.setOnClickPendingIntent(R.id.btnToggle, togglePI)
 
-        // ---------------------------
-        // INTENTO: Abrir MainActivity
-        // ---------------------------
-        val openAppIntent = Intent(context, MainActivity::class.java)
-        val openAppPendingIntent = PendingIntent.getActivity(
-            context,
-            1,
-            openAppIntent,
+        // Gestionar inventario
+        val gestionarIntent = Intent(context, InventoryWidget::class.java).apply { action = ACTION_GESTIONAR }
+        val gestionarPI = PendingIntent.getBroadcast(
+            context, 101, gestionarIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        views.setOnClickPendingIntent(R.id.imgGestionar, openAppPendingIntent)
-        views.setOnClickPendingIntent(R.id.txtGestionar, openAppPendingIntent)
+        views.setOnClickPendingIntent(R.id.imgGestionar, gestionarPI)
+        views.setOnClickPendingIntent(R.id.txtGestionar, gestionarPI)
 
-        // ---------------------------
-        // OJO ABIERTO / CERRADO
-        // ---------------------------
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val isHidden = prefs.getBoolean(KEY_IS_HIDDEN, true)
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val isHiddenPref = prefs.getBoolean(KEY_HIDDEN, true)
 
-        if (isHidden) {
-            // OJO CERRADO → ocultamos saldo
+        val user = FirebaseAuth.getInstance().currentUser
+        if (user == null || isHiddenPref) {
+            // No hay sesión o está oculto: asteriscos
             views.setTextViewText(R.id.txtSaldo, "$ ****")
             views.setImageViewResource(R.id.btnToggle, R.drawable.cerrado)
+            views.setTextColor(R.id.txtSaldo, 0xFFFFFFFF.toInt()) // blanco
             appWidgetManager.updateAppWidget(appWidgetId, views)
             return
         }
 
-        // OJO ABIERTO → mostramos saldo real
+        // Hay sesión y no está oculto -> mostrar total del inventario
         views.setImageViewResource(R.id.btnToggle, R.drawable.abierto)
 
-        // ---------------------------
-        // LEER TOTAL DESDE FIRESTORE
-        // ---------------------------
+        // Leer total desde SharedPreferences (el que se guardó en HomeFragment)
+        val total = prefs.getString("totalInventory", "$ ****") ?: "$ ****"
+        views.setTextViewText(R.id.txtSaldo, total)
+        views.setTextColor(R.id.txtSaldo, 0xFFFFFFFF.toInt()) // blanco
 
-        // Ajusta "products" si tu colección se llama distinto
-        FirebaseFirestore.getInstance()
-            .collection("products")
-            .get()
-            .addOnSuccessListener { snapshot ->
-                var totalCents = 0L
+        appWidgetManager.updateAppWidget(appWidgetId, views)
+    }
 
-                for (doc in snapshot.documents) {
-                    // Campos tal como los guardas en Firestore
-                    val priceCents = doc.getLong("priceCents") ?: 0L
-                    val quantity = doc.getLong("quantity") ?: 0L
+    private fun openLogin(context: Context) {
+        val i = Intent(context, LoginActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            putExtra("fromWidget", true)
+        }
+        context.startActivity(i)
+    }
 
-                    totalCents += priceCents * quantity
-                }
+    private fun openHome(context: Context) {
+        val i = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            putExtra("fromWidget", true)
+        }
+        context.startActivity(i)
+    }
 
-                // Si guardas centavos (100 = $1,00)
-                val totalPesos = totalCents / 100.0
-
-                val formatter = NumberFormat.getCurrencyInstance(Locale("es", "CO"))
-                val formatted = formatter.format(totalPesos)
-
-                views.setTextViewText(R.id.txtSaldo, formatted)
-                appWidgetManager.updateAppWidget(appWidgetId, views)
-            }
-            .addOnFailureListener {
-                // En caso de error de red / firestore, no rompemos el widget
-                views.setTextViewText(R.id.txtSaldo, "$ ****")
-                appWidgetManager.updateAppWidget(appWidgetId, views)
-            }
+    // Extension para RemoteViews: cambiar color de texto
+    private fun RemoteViews.setTextColor(viewId: Int, color: Int) {
+        this.setTextColor(viewId, color)
     }
 }
