@@ -4,24 +4,45 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.*
+import androidx.activity.addCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.room.Room
 import com.google.firebase.auth.FirebaseAuth
 import com.univalle.inventarioapp.LoginActivity
 import com.univalle.inventarioapp.R
-import com.univalle.inventarioapp.data.local.AppDatabase
 import com.univalle.inventarioapp.databinding.FragmentHomeBinding
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+/**
+ * Fragment de Inventario (HU3)
+ * Muestra la lista de productos desde Firestore
+ * Cumple criterios:
+ * - Persistencia de sesión (MainActivity verifica)
+ * - Diseño con colores especificados
+ * - Logout limpia backstack
+ * - Botón atrás minimiza app
+ * - Lista con diseño especificado
+ * - Estado de carga
+ * - FAB naranja
+ * - Navegación a detalle
+ */
+@AndroidEntryPoint
 class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var vm: HomeViewModel
+    // ViewModel inyectado por Hilt
+    private val vm: HomeViewModel by viewModels()
+
+    @Inject
+    lateinit var auth: FirebaseAuth
 
     private val adapter by lazy {
         ProductAdapter { code ->
@@ -35,60 +56,74 @@ class HomeFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setHasOptionsMenu(true) // habilita menú en el fragment
+        setHasOptionsMenu(true)
+
+        // CRITERIO 4: BackHandler para minimizar app en lugar de volver a Login
+        requireActivity().onBackPressedDispatcher.addCallback(this) {
+            requireActivity().moveTaskToBack(true)
+        }
     }
 
     override fun onCreateView(
-        inflater: android.view.LayoutInflater,
-        container: android.view.ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): android.view.View {
+    ): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         return binding.root
     }
 
-    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Toolbar
+        // CRITERIO 2: Toolbar configurado
         (requireActivity() as AppCompatActivity).setSupportActionBar(binding.toolbarHome)
 
         // RecyclerView
         binding.rvProducts.layoutManager = LinearLayoutManager(requireContext())
         binding.rvProducts.adapter = adapter
 
-        binding.progressHome.visibility = View.VISIBLE
+        // Observar StateFlow para estados UI (Loading, Success, Error)
+        viewLifecycleOwner.lifecycleScope.launch {
+            vm.uiState.collect { state ->
+                when (state) {
+                    is UiState.Loading -> {
+                        binding.progressHome.visibility = View.VISIBLE
+                    }
+                    is UiState.Success -> {
+                        binding.progressHome.visibility = View.GONE
+                        adapter.submitList(state.products)
+                    }
+                    is UiState.Error -> {
+                        binding.progressHome.visibility = View.GONE
+                        // Mostrar error (puedes agregar un TextView o Snackbar)
+                    }
+                }
+            }
+        }
 
-        val db = Room.databaseBuilder(
-            requireContext(),
-            AppDatabase::class.java,
-            "inventario.db"
-        ).fallbackToDestructiveMigration().build()
-
-        val factory = HomeViewModelFactory(db.productDao())
-        vm = ViewModelProvider(this, factory)[HomeViewModel::class.java]
-
-        // Observers
+        // Observar LiveData de productos (compatibilidad)
         vm.products.observe(viewLifecycleOwner) { list ->
             binding.progressHome.visibility = View.GONE
             adapter.submitList(list)
         }
 
+        // Observar total formateado
         vm.totalFormatted.observe(viewLifecycleOwner) { total ->
             binding.tvTotalInventory.text = "Total inventario: $total"
 
-            // --- NUEVO: Guardar total en SharedPreferences para el widget ---
+            // Guardar total en SharedPreferences para el widget
             val prefs = requireContext().getSharedPreferences("inventory_widget_prefs", Context.MODE_PRIVATE)
             prefs.edit().putString("totalInventory", total).apply()
         }
 
-        // FAB agregar producto
+        // CRITERIO 7: FAB agregar producto
         binding.fabAdd.setOnClickListener {
             findNavController().navigate(R.id.action_homeFragment_to_addProductFragment)
         }
     }
 
-    // Menú cerrar sesión
+    // CRITERIO 3: Menú cerrar sesión
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         inflater.inflate(R.menu.menu_home, menu)
         super.onCreateOptionsMenu(menu, inflater)
@@ -97,7 +132,8 @@ class HomeFragment : Fragment() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_logout -> {
-                FirebaseAuth.getInstance().signOut()
+                // CRITERIO 3: Logout limpia backstack
+                auth.signOut()
                 val intent = Intent(requireContext(), LoginActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     putExtra("fromWidget", false)
