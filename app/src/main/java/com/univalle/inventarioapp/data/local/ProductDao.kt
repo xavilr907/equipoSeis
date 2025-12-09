@@ -22,11 +22,7 @@ interface ProductDao {
     @Query("DELETE FROM products WHERE code = :code")
     suspend fun deleteByCode(code: String)
 
-    // Suma simple del precio (sin quantity por ahora)
-    @Query("SELECT SUM(priceCents) FROM products")
-    suspend fun getTotalInventoryValue(): Long?
-
-    // ---------- NUEVO: leer todos los productos una sola vez (para widget) ----------
+    // Leer todos los productos una sola vez (para widget)
     @Query("SELECT * FROM products ORDER BY name ASC")
     suspend fun observeAllOnce(): List<ProductEntity>
 }
