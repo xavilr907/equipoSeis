@@ -30,3 +30,9 @@ google-services.json
 
 # Misc
 .DS_Store
+
+# === Documentación Técnica ===
+# Archivos de documentación generados durante el desarrollo
+*.md
+!README.md
+
