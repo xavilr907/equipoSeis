@@ -34,5 +34,17 @@ object AppModule {
     fun provideAuthRepository(
         auth: FirebaseAuth
     ): AuthRepository = AuthRepositoryImpl(auth)
+
+    @Provides
+    @Singleton
+    fun provideFirebaseFirestore(): FirebaseFirestore =
+        FirebaseFirestore.getInstance()
+
+    // ➕ NUEVO: ProductsRepository
+    @Provides
+    @Singleton
+    fun provideProductsRepository(
+        impl: ProductsRepositoryImpl
+    ): ProductsRepository = impl
 }
 
