@@ -1,118 +1,108 @@
 package com.univalle.inventarioapp.ui.detail
 
-import android.content.Intent
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.univalle.inventarioapp.EditProductActivity
+import androidx.navigation.fragment.navArgs
 import com.univalle.inventarioapp.R
-import com.univalle.inventarioapp.data.local.AppDatabase
 import com.univalle.inventarioapp.databinding.FragmentProductDetailBinding
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import java.text.NumberFormat
+import java.util.Locale
 
-class ProductDetailFragment : Fragment() {
+@AndroidEntryPoint
+class ProductDetailFragment : Fragment(R.layout.fragment_product_detail) {
 
     private var _binding: FragmentProductDetailBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var vm: ProductDetailViewModel
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        _binding = FragmentProductDetailBinding.inflate(inflater, container, false)
-        return binding.root
-    }
+    private val vm: ProductDetailViewModel by viewModels()
+    private val args: ProductDetailFragmentArgs by navArgs()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        _binding = FragmentProductDetailBinding.bind(view)
 
-        // ---------- Toolbar: icono y acción "atrás" ----------
-        binding.toolbarDetail.navigationIcon =
-            ContextCompat.getDrawable(requireContext(), R.drawable.ic_arrow_back_white)
+        setupListeners()
+        setupObservers()
 
+        // Cargar el producto usando el code (documentId)
+        vm.loadProduct(args.productCode)
+    }
+
+    private fun setupListeners() {
+        // Flecha atrás
         binding.toolbarDetail.setNavigationOnClickListener {
-            // Simplemente volver al fragment anterior (Home en tu flujo)
-            findNavController().popBackStack()
+            vm.onBack()
         }
 
-        // ---------- DB y ViewModel ----------
-        val db = AppDatabase.getInstance(requireContext())
-
-        val productCode = arguments?.getString("productCode") ?: run {
-            // si no hay código, salimos
-            findNavController().popBackStack()
-            return
+        // Eliminar producto
+        binding.buttonDelete.setOnClickListener {
+            vm.deleteProduct()
         }
 
-        val factory = ProductDetailViewModelFactory(db.productDao(), productCode)
-        vm = ViewModelProvider(this, factory)[ProductDetailViewModel::class.java]
-
-        // ---------- Observers ----------
-        vm.product.observe(viewLifecycleOwner) { p ->
-            if (p == null) return@observe
-            binding.tvProductName.text = p.name
-            binding.tvPrice.text = formatCurrency(p.priceCents)
-            binding.tvQuantity.text = p.quantity.toString()
-        }
-
-        vm.totalFormatted.observe(viewLifecycleOwner) { t ->
-            binding.tvTotal.text = t
-        }
-
-        vm.navigateBack.observe(viewLifecycleOwner) { goBack ->
-            if (goBack == true) {
-                // Después de eliminar, simplemente volvemos atrás
-                findNavController().popBackStack()
-            }
-        }
-
-        vm.error.observe(viewLifecycleOwner) { err ->
-            err?.let {
-                MaterialAlertDialogBuilder(requireContext())
-                    .setTitle("Error")
-                    .setMessage(it)
-                    .setPositiveButton("OK", null)
-                    .show()
-            }
-        }
-
-        // ---------- Botón Eliminar ----------
-        binding.btnDelete.setOnClickListener {
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Confirmar eliminación")
-                .setMessage("¿Estás seguro de que deseas eliminar este producto?")
-                .setNegativeButton("No") { dialog, _ ->
-                    dialog.dismiss()
-                }
-                .setPositiveButton("Sí") { _, _ ->
-                    vm.deleteProduct()
-                }
-                .show()
-        }
-
-        // ---------- FAB Editar -> abre EditProductActivity ----------
+        // Editar producto
         binding.fabEdit.setOnClickListener {
-            val context = requireContext()
-            val intent = Intent(context, EditProductActivity::class.java).apply {
-                putExtra("EXTRA_CODE", productCode)
-            }
-            startActivity(intent)
+            vm.onEdit()
         }
     }
 
-    private fun formatCurrency(cents: Long): String {
-        val units = cents / 100.0
-        return java.text.NumberFormat
-            .getCurrencyInstance(java.util.Locale.getDefault())
-            .format(units)
+    private fun setupObservers() {
+        // Estado (Loading, Success, Error)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                vm.uiState.collect { ui ->
+                    binding.progressBar.visibility =
+                        if (ui.loading) View.VISIBLE else View.GONE
+
+                    if (ui.error != null) {
+                        binding.textError.apply {
+                            visibility = View.VISIBLE
+                            text = ui.error
+                        }
+                    } else {
+                        binding.textError.visibility = View.GONE
+                    }
+
+                    ui.product?.let { product ->
+                        binding.textName.text = product.name
+                        binding.textQuantity.text = product.quantity.toString()
+
+                        val price = product.priceCents / 100.0
+                        val formatter = NumberFormat.getCurrencyInstance(Locale.getDefault())
+
+                        binding.textPrice.text = formatter.format(price)
+                        binding.textTotal.text = formatter.format(ui.total)
+                    }
+                }
+            }
+        }
+
+        // Eventos de navegación
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                vm.events.collect { event ->
+                    when (event) {
+                        ProductDetailEvent.NavigateBack -> {
+                            findNavController().navigateUp()
+                        }
+
+                        ProductDetailEvent.NavigateToEdit -> {
+                            findNavController().navigate(
+                                R.id.action_productDetailFragment_to_editProductFragment,
+                                Bundle().apply { putString("productCode", args.productCode) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 
     override fun onDestroyView() {
