@@ -11,6 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToLong
+import androidx.core.widget.addTextChangedListener
+
 
 class EditProductActivity : AppCompatActivity() {
 
@@ -46,6 +48,31 @@ class EditProductActivity : AppCompatActivity() {
 
         // Cargar datos del producto para editar
         loadProduct()
+
+        // Habiitar boton dinamicamente
+        fun validarCampos() {
+            val nombre = binding.etName.text?.isNotEmpty() == true
+            val precio = binding.etPrice.text?.isNotEmpty() == true
+            val cantidad = binding.etQty.text?.isNotEmpty() == true
+
+            val habilitar = nombre && precio && cantidad
+
+            binding.btnEditar.isEnabled = habilitar
+
+            if (habilitar) {
+                binding.btnEditar.setTextColor(android.graphics.Color.WHITE)
+                binding.btnEditar.setTypeface(null, android.graphics.Typeface.BOLD)
+            } else {
+                binding.btnEditar.setTextColor(android.graphics.Color.GRAY)
+                binding.btnEditar.setTypeface(null, android.graphics.Typeface.NORMAL)
+            }
+        }
+
+// Detectar cambios
+        binding.etName.addTextChangedListener { validarCampos() }
+        binding.etPrice.addTextChangedListener { validarCampos() }
+        binding.etQty.addTextChangedListener { validarCampos() }
+
 
         // Botón Editar
         binding.btnEditar.setOnClickListener {
