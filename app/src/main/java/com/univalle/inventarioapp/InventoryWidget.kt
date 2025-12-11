@@ -8,6 +8,9 @@ import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
 import com.google.firebase.auth.FirebaseAuth
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
+import java.util.Locale
 
 class InventoryWidget : AppWidgetProvider() {
 
@@ -38,6 +41,7 @@ class InventoryWidget : AppWidgetProvider() {
                     openLogin(context)
                     return
                 }
+
                 val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 val current = prefs.getBoolean(KEY_HIDDEN, true)
                 prefs.edit().putBoolean(KEY_HIDDEN, !current).apply()
@@ -49,27 +53,25 @@ class InventoryWidget : AppWidgetProvider() {
                 if (user == null) openLogin(context) else openHome(context)
             }
 
-            ACTION_REFRESH -> {
-                onUpdate(context, manager, ids)
-            }
+            ACTION_REFRESH -> onUpdate(context, manager, ids)
         }
     }
 
     private fun updateSingleWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
         val views = RemoteViews(context.packageName, R.layout.inventory_widget)
 
-        // Toggle (ojo)
-        val toggleIntent = Intent(context, InventoryWidget::class.java).apply { action = ACTION_TOGGLE }
+        // Intent toggle
         val togglePI = PendingIntent.getBroadcast(
-            context, 100, toggleIntent,
+            context, 100,
+            Intent(context, InventoryWidget::class.java).apply { action = ACTION_TOGGLE },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         views.setOnClickPendingIntent(R.id.btnToggle, togglePI)
 
-        // Gestionar inventario
-        val gestionarIntent = Intent(context, InventoryWidget::class.java).apply { action = ACTION_GESTIONAR }
+        // Intent gestionar
         val gestionarPI = PendingIntent.getBroadcast(
-            context, 101, gestionarIntent,
+            context, 101,
+            Intent(context, InventoryWidget::class.java).apply { action = ACTION_GESTIONAR },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         views.setOnClickPendingIntent(R.id.imgGestionar, gestionarPI)
@@ -79,22 +81,24 @@ class InventoryWidget : AppWidgetProvider() {
         val isHiddenPref = prefs.getBoolean(KEY_HIDDEN, true)
 
         val user = FirebaseAuth.getInstance().currentUser
+
         if (user == null || isHiddenPref) {
-            // No hay sesión o está oculto: asteriscos
             views.setTextViewText(R.id.txtSaldo, "$ ****")
             views.setImageViewResource(R.id.btnToggle, R.drawable.cerrado)
-            views.setTextColor(R.id.txtSaldo, 0xFFFFFFFF.toInt()) // blanco
+            views.setTextColor(R.id.txtSaldo, 0xFFFFFFFF.toInt())
             appWidgetManager.updateAppWidget(appWidgetId, views)
             return
         }
 
-        // Hay sesión y no está oculto -> mostrar total del inventario
+        // Mostrar el valor real
         views.setImageViewResource(R.id.btnToggle, R.drawable.abierto)
 
-        // Leer total desde SharedPreferences (el que se guardó en HomeFragment)
-        val total = prefs.getString("totalInventory", "$ ****") ?: "$ ****"
-        views.setTextViewText(R.id.txtSaldo, total)
-        views.setTextColor(R.id.txtSaldo, 0xFFFFFFFF.toInt()) // blanco
+        // --- FORMATEO DEL SALDO ---
+        val rawTotal = prefs.getString("totalInventory", "0") ?: "0"
+        val formatted = formatSaldo(rawTotal)
+
+        views.setTextViewText(R.id.txtSaldo, "$ $formatted")
+        views.setTextColor(R.id.txtSaldo, 0xFFFFFFFF.toInt())
 
         appWidgetManager.updateAppWidget(appWidgetId, views)
     }
@@ -115,8 +119,27 @@ class InventoryWidget : AppWidgetProvider() {
         context.startActivity(i)
     }
 
-    // Extension para RemoteViews: cambiar color de texto
-    private fun RemoteViews.setTextColor(viewId: Int, color: Int) {
-        this.setTextColor(viewId, color)
+    // ------- FORMATEO PERSONALIZADO -------
+    private fun formatSaldo(value: String): String {
+        return try {
+            val clean = value
+                .replace("$", "")
+                .replace(".", "")
+                .replace(",", ".")
+                .trim()
+
+            val number = clean.toDouble()
+
+            val symbols = DecimalFormatSymbols(Locale.getDefault()).apply {
+                groupingSeparator = '.'
+                decimalSeparator = ','
+            }
+
+            val formatter = DecimalFormat("#,###,###.00", symbols)
+            formatter.format(number)
+
+        } catch (e: Exception) {
+            value
+        }
     }
 }
