@@ -4,166 +4,149 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/overlay_black_cc"
-    android:fitsSystemWindows="true">
+    android:background="#CC000000">
 
+    <!-- Toolbar igual a la del inventario -->
     <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar_detail"
+        android:id="@+id/toolbarDetail"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@color/toolbar_gray"
-        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
-        android:titleTextColor="@color/white"
-        app:navigationIconTint="@color/white"
-        app:title="@string/title_product_detail" />
+        android:background="#424242"
+        android:elevation="6dp"
+        app:title="Detalle del producto"
+        app:titleTextColor="@android:color/white"
+        app:navigationIcon="@drawable/ic_arrow_back_white"
+        />
 
-    <ScrollView
+    <LinearLayout
+        android:orientation="vertical"
+        android:padding="12dp"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="16dp"
-        android:layout_marginTop="56dp">
+        android:layout_marginTop="?attr/actionBarSize">
 
-        <LinearLayout
+        <!-- CARD AL ESTILO INVENTARIO -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardProduct"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center_horizontal">
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp">
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/card_product"
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:layout_marginEnd="12dp"
-                app:cardCornerRadius="14dp"
-                android:padding="24dp"
-                android:background="@color/white">
+                android:padding="16dp">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <!-- Nombre -->
+                <TextView
+                    android:id="@+id/textName"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"/>
 
-                    <TextView
-                        android:id="@+id/tv_product_name"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:textStyle="bold"
-                        android:textColor="#000000"
-                        android:textSize="18sp"
-                        android:text="@string/label_product_name" />
+                <!-- PRECIO -->
+                <TextView
+                    android:id="@+id/labelPrice"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Precio Unidad:"
+                    android:textSize="14sp"
+                    app:layout_constraintTop_toBottomOf="@id/textName"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/textPrice" />
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="12dp"
-                        android:gravity="center_vertical">
+                <TextView
+                    android:id="@+id/textPrice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textStyle="bold"
+                    android:textColor="#FF9800"
+                    android:textSize="16sp"
+                    app:layout_constraintBaseline_toBaselineOf="@id/labelPrice"
+                    app:layout_constraintEnd_toEndOf="parent"/>
 
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginStart="12dp"
-                            android:text="@string/label_price_unit"
-                            android:textColor="#333333"
-                            android:textSize="16sp" />
+                <!-- CANTIDAD -->
+                <TextView
+                    android:id="@+id/labelQuantity"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Cantidad Disponible:"
+                    android:textSize="14sp"
+                    app:layout_constraintTop_toBottomOf="@id/labelPrice"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/textQuantity" />
 
-                        <TextView
-                            android:id="@+id/tv_price"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginEnd="10dp"
-                            android:textColor="@color/total_orange"
-                            android:textSize="16sp"
-                            android:text="@string/sample_currency" />
-                    </LinearLayout>
+                <TextView
+                    android:id="@+id/textQuantity"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="16sp"
+                    app:layout_constraintBaseline_toBaselineOf="@id/labelQuantity"
+                    app:layout_constraintEnd_toEndOf="parent"/>
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="8dp"
-                        android:gravity="center_vertical">
+                <!-- TOTAL -->
+                <TextView
+                    android:id="@+id/labelTotal"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Total:"
+                    android:textSize="14sp"
+                    app:layout_constraintTop_toBottomOf="@id/labelQuantity"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/textTotal" />
 
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginStart="12dp"
-                            android:text="@string/label_quantity"
-                            android:textColor="#333333"
-                            android:textSize="16sp" />
+                <TextView
+                    android:id="@+id/textTotal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#FF9800"
+                    android:textStyle="bold"
+                    android:textSize="18sp"
+                    app:layout_constraintBaseline_toBaselineOf="@id/labelTotal"
+                    app:layout_constraintEnd_toEndOf="parent"/>
 
-                        <TextView
-                            android:id="@+id/tv_quantity"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginEnd="10dp"
-                            android:textColor="#000000"
-                            android:textSize="16sp"
-                            android:text="@string/sample_quantity" />
-                    </LinearLayout>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </androidx.cardview.widget.CardView>
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="16dp"
-                        android:gravity="center_vertical">
+        <!-- BOTÓN ELIMINAR -->
+        <Button
+            android:id="@+id/buttonDelete"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Eliminar"
+            android:backgroundTint="@color/orange_primary"
+            android:textColor="@android:color/white"
+            android:layout_marginBottom="20dp"
+            android:gravity="center"/>
 
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginStart="12dp"
-                            android:textStyle="bold"
-                            android:text="@string/label_total"
-                            android:textColor="#000000"
-                            android:textSize="16sp" />
+        <!-- Progress -->
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:layout_gravity="center"/>
+    </LinearLayout>
 
-                        <TextView
-                            android:id="@+id/tv_total"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginEnd="10dp"
-                            android:textStyle="bold"
-                            android:textColor="@color/total_orange"
-                            android:textSize="16sp"
-                            android:text="@string/sample_currency" />
-                    </LinearLayout>
-
-                </LinearLayout>
-
-            </com.google.android.material.card.MaterialCardView>
-
-            <Button
-                android:id="@+id/btn_delete"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="28dp"
-                android:layout_marginStart="48dp"
-                android:layout_marginEnd="48dp"
-                android:background="@drawable/rounded_button"
-                android:text="@string/btn_delete"
-                android:textStyle="bold"
-                android:textColor="@color/white"
-                app:backgroundTint="@color/orange_primary" />
-
-        </LinearLayout>
-
-    </ScrollView>
-
+    <!-- FAB al estilo Inventario -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_edit"
+        android:id="@+id/fabEdit"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
         android:layout_margin="20dp"
-        android:contentDescription="@string/desc_edit_fab"
+        android:contentDescription="Editar producto"
+        android:layout_gravity="bottom|end"
         app:backgroundTint="@color/orange_primary"
-        app:srcCompat="@drawable/ic_edit_white"
-        app:fabSize="normal" />
+        app:tint="@android:color/white"
+        app:srcCompat="@android:drawable/ic_menu_edit" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -21,7 +21,8 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
+    fun provideFirebaseFirestore(): FirebaseFirestore =
+        FirebaseFirestore.getInstance()
 
     @Provides
     @Singleton
@@ -35,4 +36,3 @@ object AppModule {
         auth: FirebaseAuth
     ): AuthRepository = AuthRepositoryImpl(auth)
 }
-
