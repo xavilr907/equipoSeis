@@ -68,79 +68,76 @@ class EditProductActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupValidation() {
-        fun validar() {
-            val n = binding.etName.text?.isNotEmpty() == true
-            val p = binding.etPrice.text?.isNotEmpty() == true
-            val q = binding.etQty.text?.isNotEmpty() == true
-            val habilitar = n && p && q
-
-            binding.btnEditar.isEnabled = habilitar
-            if (habilitar) {
-                binding.btnEditar.setTextColor(android.graphics.Color.WHITE)
-                binding.btnEditar.setTypeface(null, android.graphics.Typeface.BOLD)
-                binding.btnEditar.background.setTint(android.graphics.Color.parseColor("#FF5722"))
-            } else {
-                binding.btnEditar.setTextColor(android.graphics.Color.LTGRAY)
-                binding.btnEditar.setTypeface(null, android.graphics.Typeface.NORMAL)
-                binding.btnEditar.background.setTint(android.graphics.Color.DKGRAY)
-            }
+    private fun setupListeners() {
+        binding.etName.addTextChangedListener {
+            viewModel.onNameChanged(it.toString())
         }
-        binding.etName.addTextChangedListener { validar() }
-        binding.etPrice.addTextChangedListener { validar() }
-        binding.etQty.addTextChangedListener { validar() }
+        binding.etPrice.addTextChangedListener {
+            viewModel.onPriceChanged(it.toString())
+        }
+        binding.etQty.addTextChangedListener {
+            viewModel.onQuantityChanged(it.toString())
+        }
+        binding.btnEditar.setOnClickListener {
+            viewModel.updateProduct()
+        }
     }
 
-    private fun saveChanges() {
-        val nombre = binding.etName.text.toString().trim()
-        val precioTxt = binding.etPrice.text.toString().trim()
-        val cantidadTxt = binding.etQty.text.toString().trim()
+    private fun setupObservers() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { state ->
+                    // Pre-llenar campos (solo en la primera carga)
+                    if (state.product != null && binding.etId.text.isNullOrEmpty()) {
+                        binding.etId.setText(state.code)
+                        binding.etName.setText(state.name)
+                        binding.etPrice.setText(state.priceText)
+                        binding.etQty.setText(state.quantityText)
+                    }
 
-        if (nombre.isEmpty() || precioTxt.isEmpty() || cantidadTxt.isEmpty()) return
+                    // Actualizar estado del botón
+                    binding.btnEditar.isEnabled = state.isValid && !state.loading
 
-        val cantidad = cantidadTxt.toIntOrNull() ?: 0
-        val precioDouble = precioTxt.replace(",", ".").toDoubleOrNull() ?: 0.0
-        val priceCents = (precioDouble * 100).roundToLong()
+                    if (state.isValid && !state.loading) {
+                        binding.btnEditar.setTextColor(android.graphics.Color.WHITE)
+                        binding.btnEditar.setTypeface(null, android.graphics.Typeface.BOLD)
+                        binding.btnEditar.background.setTint(android.graphics.Color.parseColor("#FF5722"))
+                    } else {
+                        binding.btnEditar.setTextColor(android.graphics.Color.LTGRAY)
+                        binding.btnEditar.setTypeface(null, android.graphics.Typeface.NORMAL)
+                        binding.btnEditar.background.setTint(android.graphics.Color.DKGRAY)
+                    }
 
-        val updated = ProductEntity(
-            id = currentProductId,
-            code = originalCode,
-            name = nombre,
-            priceCents = priceCents,
-            quantity = cantidad
-        )
-
-        binding.btnEditar.isEnabled = false
-        binding.btnEditar.text = "Guardando..."
-
-        lifecycleScope.launch(Dispatchers.IO) {
-            // 1. Guardar en Room (Local)
-            val dao = db.productDao()
-            dao.upsert(updated)
-
-            // 2. Guardar en Firestore (Nube)
-            if (currentProductId != null) {
-                try {
-                    val map = mapOf(
-                        "name" to nombre,
-                        "price" to precioDouble,
-                        "quantity" to cantidad
-                    )
-                    firestore.collection("products").document(currentProductId!!).update(map)
-                } catch (e: Exception) {
-                    e.printStackTrace()
+                    // Actualizar texto del botón
+                    binding.btnEditar.text = if (state.loading) "Guardando..." else "Editar"
                 }
             }
+        }
 
-            withContext(Dispatchers.Main) {
-                Toast.makeText(this@EditProductActivity, "Producto actualizado", Toast.LENGTH_SHORT).show()
-
-                // --- CAMBIO AQUÍ: Volver al Home (MainActivity) ---
-                val intent = Intent(this@EditProductActivity, MainActivity::class.java)
-                // Flags para limpiar la pila: Borra Detalle y Editar del historial
-                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                startActivity(intent)
-                finish()
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.events.collect { event ->
+                    when (event) {
+                        is EditProductEvent.NavigateToHome -> {
+                            Toast.makeText(
+                                this@EditProductActivity,
+                                "Producto actualizado",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            val intent = Intent(this@EditProductActivity, MainActivity::class.java)
+                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                            startActivity(intent)
+                            finish()
+                        }
+                        is EditProductEvent.ShowError -> {
+                            Toast.makeText(
+                                this@EditProductActivity,
+                                event.message,
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
             }
         }
     }
