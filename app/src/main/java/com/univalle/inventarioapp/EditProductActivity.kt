@@ -1,71 +1,52 @@
-package com.univalle.inventarioapp.ui
+package com.univalle.inventarioapp.ui.edit
 
-import android.content.Intent // Import necesario
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.addTextChangedListener
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import com.google.firebase.firestore.FirebaseFirestore
-import com.univalle.inventarioapp.MainActivity // Import necesario para volver al Home
-import com.univalle.inventarioapp.data.local.AppDatabase
-import com.univalle.inventarioapp.data.model.ProductEntity
+import androidx.lifecycle.repeatOnLifecycle
+import com.univalle.inventarioapp.MainActivity
 import com.univalle.inventarioapp.databinding.ActivityEditProductBinding
-import kotlinx.coroutines.Dispatchers
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlin.math.roundToLong
 
+@AndroidEntryPoint
 class EditProductActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityEditProductBinding
-    private lateinit var db: AppDatabase
-    private val firestore = FirebaseFirestore.getInstance()
-
-    // Variables para los datos
-    private var originalCode: String = ""
-    private var currentProductId: String? = null
+    private val viewModel: EditProductViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityEditProductBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        db = AppDatabase.getInstance(applicationContext)
-
         // Configurar Toolbar
         setSupportActionBar(binding.toolbarEdit)
         binding.toolbarEdit.setNavigationOnClickListener { finish() }
 
-        // 1. RECUPERAR DATOS DEL INTENT
-        val code = intent.getStringExtra("EXTRA_CODE")
+        // Recuperar datos del Intent
+        val code = intent.getStringExtra("EXTRA_CODE") ?: ""
         val id = intent.getStringExtra("EXTRA_ID")
-        val name = intent.getStringExtra("EXTRA_NAME")
-        val priceCents = intent.getLongExtra("EXTRA_PRICE", -1)
-        val quantity = intent.getIntExtra("EXTRA_QTY", -1)
+        val name = intent.getStringExtra("EXTRA_NAME") ?: ""
+        val priceCents = intent.getLongExtra("EXTRA_PRICE", 0)
+        val quantity = intent.getIntExtra("EXTRA_QTY", 0)
 
-        if (code != null && name != null) {
-            originalCode = code
-            currentProductId = id
-
-            // Llenar la UI
-            binding.etId.setText(code)
-            binding.etName.setText(name)
-            binding.etQty.setText(quantity.toString())
-
-            val pesos = priceCents / 100.0
-            binding.etPrice.setText(pesos.toString())
-        } else {
+        if (code.isEmpty() || name.isEmpty()) {
             Toast.makeText(this, "Error al recibir datos", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
 
-        setupValidation()
+        // Cargar datos en ViewModel
+        viewModel.loadProduct(code, name, priceCents, quantity, id)
 
-        binding.btnEditar.setOnClickListener {
-            saveChanges()
-        }
+        setupListeners()
+        setupObservers()
     }
 
     private fun setupListeners() {
