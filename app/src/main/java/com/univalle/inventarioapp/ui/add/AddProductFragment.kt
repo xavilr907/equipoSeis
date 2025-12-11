@@ -8,22 +8,22 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import androidx.room.Room
 import com.google.android.material.textfield.TextInputLayout
-import com.google.firebase.firestore.FirebaseFirestore
-import com.univalle.inventarioapp.data.local.AppDatabase
 import com.univalle.inventarioapp.data.model.ProductEntity
-import com.univalle.inventarioapp.data.remote.FirestoreRepository
 import com.univalle.inventarioapp.databinding.FragmentAddProductBinding
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class AddProductFragment : Fragment() {
 
     private var _binding: FragmentAddProductBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var vm: AddProductViewModel
+    private val vm: AddProductViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -37,25 +37,9 @@ class AddProductFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // --- Inicializar Room ---
-        val db = Room.databaseBuilder(
-            requireContext(),
-            AppDatabase::class.java,
-            "inventario.db"
-        ).fallbackToDestructiveMigration().build()
-
-        // --- Inicializar Firestore ---
-        val fsRepo = FirestoreRepository(FirebaseFirestore.getInstance())
-
-        // --- ViewModel con DAO + Firestore ---
-        val factory = AddProductViewModelFactory(db.productDao(), fsRepo)
-        vm = ViewModelProvider(this, factory)[AddProductViewModel::class.java]
-
         // --- Flecha de la toolbar: volver atrás (Home en tu flujo) ---
         binding.toolbarAddProduct.setNavigationOnClickListener {
             findNavController().popBackStack()
-            // Si prefieres ir a un fragment específico:
-            // findNavController().navigate(R.id.homeFragment)
         }
 
         // --- Validación en tiempo real ---
@@ -80,28 +64,26 @@ class AddProductFragment : Fragment() {
                 quantity = qty
             )
 
-            vm.upsert(
-                product,
-                onDone = {
-                    requireActivity().runOnUiThread {
+            viewLifecycleOwner.lifecycleScope.launch {
+                vm.upsert(
+                    product,
+                    onDone = {
                         Toast.makeText(
                             requireContext(),
-                            "Producto guardado (local y nube)",
+                            "Producto guardado",
                             Toast.LENGTH_SHORT
                         ).show()
                         findNavController().popBackStack()
-                    }
-                },
-                onError = { e ->
-                    requireActivity().runOnUiThread {
+                    },
+                    onError = { e ->
                         Toast.makeText(
                             requireContext(),
                             "Aviso: ${e.message}",
                             Toast.LENGTH_LONG
                         ).show()
                     }
-                }
-            )
+                )
+            }
         }
 
         // Estado inicial del botón
@@ -179,6 +161,11 @@ class AddProductFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        // Remover listeners para prevenir memory leaks
+        binding.etCode.removeTextChangedListener(watcher)
+        binding.etName.removeTextChangedListener(watcher)
+        binding.etPrice.removeTextChangedListener(watcher)
+        binding.etQty.removeTextChangedListener(watcher)
         _binding = null
     }
 }
