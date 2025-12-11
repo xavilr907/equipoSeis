@@ -1,7 +1,5 @@
 package com.univalle.inventarioapp.ui.home
 
-import android.appwidget.AppWidgetManager
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -13,11 +11,14 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.google.firebase.auth.FirebaseAuth
 import com.univalle.inventarioapp.InventoryWidget
 import com.univalle.inventarioapp.LoginActivity
 import com.univalle.inventarioapp.R
 import com.univalle.inventarioapp.databinding.FragmentHomeBinding
+import com.univalle.inventarioapp.workers.WidgetUpdateWorker
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -80,7 +81,9 @@ class HomeFragment : Fragment() {
                     is UiState.Success -> {
                         binding.progressHome.visibility = View.GONE
                         adapter.submitList(state.products)
-                        calculateAndSaveTotal(state.products)
+
+                        // Actualizar widget cuando cambian los productos
+                        updateWidget()
                     }
                     is UiState.Error -> binding.progressHome.visibility = View.GONE
                 }
@@ -139,6 +142,14 @@ class HomeFragment : Fragment() {
         return when (item.itemId) {
             R.id.action_logout -> {
                 auth.signOut()
+
+                // Limpiar SharedPreferences del widget
+                val prefs = requireContext().getSharedPreferences("inventory_widget_prefs", Context.MODE_PRIVATE)
+                prefs.edit().clear().apply()
+
+                // Actualizar widget para mostrar estado sin sesión
+                updateWidget()
+
                 val intent = Intent(requireContext(), LoginActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     putExtra("fromWidget", false)
@@ -148,6 +159,15 @@ class HomeFragment : Fragment() {
             }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    private fun updateWidget() {
+        // Disparar Worker para actualizar el widget con el total actualizado
+        val workRequest = OneTimeWorkRequestBuilder<WidgetUpdateWorker>()
+            .addTag(WidgetUpdateWorker.TAG)
+            .build()
+
+        WorkManager.getInstance(requireContext()).enqueue(workRequest)
     }
 
     override fun onDestroyView() {
