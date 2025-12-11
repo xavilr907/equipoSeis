@@ -1,11 +1,13 @@
 package com.univalle.inventarioapp.ui
 
+import android.content.Intent // Import necesario
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.lifecycleScope
 import com.google.firebase.firestore.FirebaseFirestore
+import com.univalle.inventarioapp.MainActivity // Import necesario para volver al Home
 import com.univalle.inventarioapp.data.local.AppDatabase
 import com.univalle.inventarioapp.data.model.ProductEntity
 import com.univalle.inventarioapp.databinding.ActivityEditProductBinding
@@ -35,7 +37,7 @@ class EditProductActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbarEdit)
         binding.toolbarEdit.setNavigationOnClickListener { finish() }
 
-        // 1. RECUPERAR DATOS DEL INTENT (Sin consultar DB)
+        // 1. RECUPERAR DATOS DEL INTENT
         val code = intent.getStringExtra("EXTRA_CODE")
         val id = intent.getStringExtra("EXTRA_ID")
         val name = intent.getStringExtra("EXTRA_NAME")
@@ -43,7 +45,6 @@ class EditProductActivity : AppCompatActivity() {
         val quantity = intent.getIntExtra("EXTRA_QTY", -1)
 
         if (code != null && name != null) {
-            // Datos recibidos correctamente
             originalCode = code
             currentProductId = id
 
@@ -133,6 +134,12 @@ class EditProductActivity : AppCompatActivity() {
 
             withContext(Dispatchers.Main) {
                 Toast.makeText(this@EditProductActivity, "Producto actualizado", Toast.LENGTH_SHORT).show()
+
+                // --- CAMBIO AQUÍ: Volver al Home (MainActivity) ---
+                val intent = Intent(this@EditProductActivity, MainActivity::class.java)
+                // Flags para limpiar la pila: Borra Detalle y Editar del historial
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(intent)
                 finish()
             }
         }
