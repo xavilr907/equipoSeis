@@ -1,9 +1,9 @@
 package com.univalle.inventarioapp
 
 import android.app.Application
+import androidx.hilt.work.HiltWorkerFactory
 import androidx.room.Room
 import androidx.work.Configuration
-import androidx.work.WorkManager
 import com.univalle.inventarioapp.data.local.AppDatabase
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -12,7 +12,7 @@ import javax.inject.Inject
 class App : Application(), Configuration.Provider {
 
     @Inject
-    lateinit var workerFactory: androidx.work.WorkerFactory
+    lateinit var workerFactory: HiltWorkerFactory
 
     companion object {
         lateinit var db: AppDatabase

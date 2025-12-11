@@ -9,6 +9,7 @@
     <application
         android:name=".App"
         android:enableOnBackInvokedCallback="true"
+        tools:targetApi="tiramisu"
         android:allowBackup="true"
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
@@ -45,7 +46,7 @@
 
         <!-- ✏️ Activity de edición -->
         <activity
-            android:name=".ui.EditProductActivity"
+            android:name=".ui.edit.EditProductActivity"
             android:exported="false" />
 
         <!-- ⬇️ WIDGET -->
