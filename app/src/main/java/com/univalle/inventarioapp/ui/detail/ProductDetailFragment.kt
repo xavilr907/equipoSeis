@@ -14,7 +14,7 @@ import androidx.navigation.fragment.navArgs
 import com.univalle.inventarioapp.R
 import com.univalle.inventarioapp.data.model.ProductEntity
 import com.univalle.inventarioapp.databinding.FragmentProductDetailBinding
-import com.univalle.inventarioapp.ui.EditProductActivity
+import com.univalle.inventarioapp.ui.edit.EditProductActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
