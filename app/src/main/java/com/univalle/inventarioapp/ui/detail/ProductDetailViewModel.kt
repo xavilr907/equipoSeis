@@ -1,119 +1,86 @@
 package com.univalle.inventarioapp.ui.detail
 
-import androidx.lifecycle.*
-import androidx.lifecycle.map
-import com.univalle.inventarioapp.data.local.ProductDao
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.univalle.inventarioapp.data.model.ProductEntity
+import com.univalle.inventarioapp.data.remote.FirestoreRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.text.NumberFormat
-import java.util.Locale
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
+import javax.inject.Inject
 
-class ProductDetailViewModel(
-    private val dao: ProductDao,
-    private val productCode: String
+data class ProductDetailUiState(
+    val loading: Boolean = true,
+    val product: ProductEntity? = null,
+    val total: Double = 0.0,
+    val error: String? = null
+)
+
+
+
+@HiltViewModel
+class ProductDetailViewModel @Inject constructor(
+    private val repository: FirestoreRepository
 ) : ViewModel() {
 
-    private val _product = MutableLiveData<ProductEntity?>()
-    val product: LiveData<ProductEntity?> = _product
+    private val _uiState = MutableStateFlow(ProductDetailUiState())
+    val uiState: StateFlow<ProductDetailUiState> = _uiState.asStateFlow()
 
-    // Use the LiveData.map extension with explicit lambda parameter type to avoid inference issues
-    val totalFormatted: LiveData<String> = _product.map { prod: ProductEntity? ->
-        if (prod == null) {
-            formatCurrency(0L)
-        } else {
-            val qty: Long = prod.quantity.toLong()
-            val totalCents: Long = prod.priceCents * qty
-            formatCurrency(totalCents)
-        }
-    }
+    private val _events = MutableSharedFlow<ProductDetailEvent>()
+    val events: SharedFlow<ProductDetailEvent> = _events.asSharedFlow()
 
-    private val _navigateBack = MutableLiveData<Boolean>()
-    val navigateBack: LiveData<Boolean> = _navigateBack
-
-    private val _error = MutableLiveData<String?>()
-    val error: LiveData<String?> = _error
-
-    init {
-        loadProduct()
-    }
-
-    fun loadProduct() {
+    fun loadProduct(code: String) {
         viewModelScope.launch {
-            try {
-                val p = dao.getByCode(productCode)
-                _product.postValue(p)
-                if (p == null) {
-                    _error.postValue("Producto no encontrado")
-                }
-            } catch (e: Exception) {
-                _error.postValue("Error cargando producto: ${e.message}")
-            }
-        }
-    }
+            _uiState.update { it.copy(loading = true) }
 
-    private suspend fun deleteFirestoreDocument(code: String): Boolean = suspendCancellableCoroutine { cont ->
-        try {
-            val ref = FirebaseFirestore.getInstance().collection("products").document(code)
-            val task = ref.delete()
-            task.addOnSuccessListener {
-                if (!cont.isCompleted) cont.resume(true)
-            }.addOnFailureListener { ex ->
-                if (!cont.isCompleted) cont.resume(false)
+            val product = repository.getProductByCode(code)
+
+            if (product == null) {
+                _uiState.update {
+                    it.copy(
+                        loading = false,
+                        error = "No se encontró el producto"
+                    )
+                }
+                return@launch
             }
-            cont.invokeOnCancellation {
-                // no-op
+
+            val total = (product.priceCents / 100.0) * product.quantity
+
+            _uiState.update {
+                it.copy(
+                    loading = false,
+                    product = product,
+                    total = total
+                )
             }
-        } catch (e: Exception) {
-            if (!cont.isCompleted) cont.resume(false)
         }
     }
 
     fun deleteProduct() {
+        val p = _uiState.value.product ?: return
+
         viewModelScope.launch {
-            try {
-                // Primero eliminar localmente
-                dao.deleteByCode(productCode)
+            _uiState.update { it.copy(loading = true) }
 
-                // Intentar eliminar en Firestore para evitar que el sync vuelva a insertarlo
-                val remoteOk = try {
-                    deleteFirestoreDocument(productCode)
-                } catch (e: Exception) {
-                    false
-                }
+            repository.deleteProduct(p.code)
 
-                if (!remoteOk) {
-                    _error.postValue("Eliminado localmente, pero no se pudo eliminar en Firestore")
-                }
-
-                // Navegar de regreso a Home (aunque la eliminación remota pudo fallar)
-                _navigateBack.postValue(true)
-
-            } catch (e: Exception) {
-                _error.postValue("No se pudo eliminar el producto: ${e.message}")
-            }
+            _uiState.update { it.copy(loading = false) }
+            _events.emit(ProductDetailEvent.NavigateBack)
         }
     }
 
-    private fun formatCurrency(cents: Long): String {
-        val format = NumberFormat.getCurrencyInstance(Locale.getDefault())
-        // asumimos que priceCents está en centavos; convertir a unidad
-        val units = cents / 100.0
-        return format.format(units)
+    fun onEdit() {
+        viewModelScope.launch { _events.emit(ProductDetailEvent.NavigateToEdit) }
     }
-}
 
-class ProductDetailViewModelFactory(
-    private val dao: ProductDao,
-    private val productCode: String
-) : ViewModelProvider.Factory {
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(ProductDetailViewModel::class.java)) {
-            return ProductDetailViewModel(dao, productCode) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+    fun onBack() {
+        viewModelScope.launch { _events.emit(ProductDetailEvent.NavigateBack) }
     }
 }

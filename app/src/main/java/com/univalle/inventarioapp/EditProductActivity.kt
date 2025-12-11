@@ -1,9 +1,11 @@
-package com.univalle.inventarioapp
+package com.univalle.inventarioapp.ui
 
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.lifecycleScope
+import com.google.firebase.firestore.FirebaseFirestore
 import com.univalle.inventarioapp.data.local.AppDatabase
 import com.univalle.inventarioapp.data.model.ProductEntity
 import com.univalle.inventarioapp.databinding.ActivityEditProductBinding
@@ -11,181 +13,126 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToLong
-import androidx.core.widget.addTextChangedListener
 
-/**
- * Actividad para editar un producto existente en la base de datos.
- *
- * Esta actividad permite:
- * - Cargar los datos de un producto usando su código.
- * - Editar el nombre, precio y cantidad del producto.
- * - Validar campos dinámicamente antes de habilitar el botón de guardar.
- * - Guardar los cambios en la base de datos local (Room) y mantener la referencia a Firestore.
- */
 class EditProductActivity : AppCompatActivity() {
 
-    /** Binding generado para acceder a las vistas de la actividad */
     private lateinit var binding: ActivityEditProductBinding
-
-    /** Instancia de la base de datos local (Room) */
     private lateinit var db: AppDatabase
+    private val firestore = FirebaseFirestore.getInstance()
 
-    /** Código original del producto (clave primaria) */
+    // Variables para los datos
     private var originalCode: String = ""
-
-    /** ID del producto en Firestore (si existe) */
     private var currentProductId: String? = null
 
-    /**
-     * Método llamado al crear la actividad.
-     * Inicializa el binding, toolbar, instancia de base de datos, carga los datos del producto
-     * y configura la validación de campos y el botón de editar.
-     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Inicialización del binding
         binding = ActivityEditProductBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Configuración del toolbar con flecha de retroceso
-        setSupportActionBar(binding.toolbarEdit)
-        binding.toolbarEdit.setNavigationOnClickListener {
-            finish()   // vuelve a la pantalla anterior
-        }
+        db = AppDatabase.getInstance(applicationContext)
 
-        // Obtener el código del producto pasado desde ProductDetailFragment
-        originalCode = intent.getStringExtra("EXTRA_CODE") ?: run {
-            Toast.makeText(this, "Producto no válido", Toast.LENGTH_SHORT).show()
+        // Configurar Toolbar
+        setSupportActionBar(binding.toolbarEdit)
+        binding.toolbarEdit.setNavigationOnClickListener { finish() }
+
+        // 1. RECUPERAR DATOS DEL INTENT (Sin consultar DB)
+        val code = intent.getStringExtra("EXTRA_CODE")
+        val id = intent.getStringExtra("EXTRA_ID")
+        val name = intent.getStringExtra("EXTRA_NAME")
+        val priceCents = intent.getLongExtra("EXTRA_PRICE", -1)
+        val quantity = intent.getIntExtra("EXTRA_QTY", -1)
+
+        if (code != null && name != null) {
+            // Datos recibidos correctamente
+            originalCode = code
+            currentProductId = id
+
+            // Llenar la UI
+            binding.etId.setText(code)
+            binding.etName.setText(name)
+            binding.etQty.setText(quantity.toString())
+
+            val pesos = priceCents / 100.0
+            binding.etPrice.setText(pesos.toString())
+        } else {
+            Toast.makeText(this, "Error al recibir datos", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
 
-        // Instancia de Room
-        db = AppDatabase.getInstance(applicationContext)
+        setupValidation()
 
-        // Cargar datos del producto para edición
-        loadProduct()
-
-        /**
-         * Función interna para validar los campos y habilitar/deshabilitar el botón de editar
-         * dinámicamente según si todos los campos obligatorios están completos.
-         */
-        fun validarCampos() {
-            val nombre = binding.etName.text?.isNotEmpty() == true
-            val precio = binding.etPrice.text?.isNotEmpty() == true
-            val cantidad = binding.etQty.text?.isNotEmpty() == true
-
-            val habilitar = nombre && precio && cantidad
-
-            binding.btnEditar.isEnabled = habilitar
-
-            if (habilitar) {
-                binding.btnEditar.setTextColor(android.graphics.Color.WHITE)
-                binding.btnEditar.setTypeface(null, android.graphics.Typeface.BOLD)
-            } else {
-                binding.btnEditar.setTextColor(android.graphics.Color.GRAY)
-                binding.btnEditar.setTypeface(null, android.graphics.Typeface.NORMAL)
-            }
-        }
-
-        // Detectar cambios en los campos de texto para habilitar/deshabilitar el botón
-        binding.etName.addTextChangedListener { validarCampos() }
-        binding.etPrice.addTextChangedListener { validarCampos() }
-        binding.etQty.addTextChangedListener { validarCampos() }
-
-        // Configuración del botón "Editar" para guardar los cambios
         binding.btnEditar.setOnClickListener {
             saveChanges()
         }
     }
 
-    /**
-     * Carga los datos del producto desde la base de datos local usando su código.
-     *
-     * Si el producto no se encuentra, se muestra un Toast y se cierra la actividad.
-     * Los campos de la UI se rellenan con los valores existentes del producto.
-     */
-    private fun loadProduct() {
-        lifecycleScope.launch(Dispatchers.IO) {
-            val dao = db.productDao()
-            val product = dao.getByCode(originalCode)
+    private fun setupValidation() {
+        fun validar() {
+            val n = binding.etName.text?.isNotEmpty() == true
+            val p = binding.etPrice.text?.isNotEmpty() == true
+            val q = binding.etQty.text?.isNotEmpty() == true
+            val habilitar = n && p && q
 
-            withContext(Dispatchers.Main) {
-                if (product == null) {
-                    Toast.makeText(
-                        this@EditProductActivity,
-                        "Producto no encontrado",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    finish()
-                    return@withContext
-                }
-
-                // Guardamos el id de Firestore por si acaso
-                currentProductId = product.id
-
-                // Rellenar campos de la UI
-                binding.etId.setText(product.code)          // ID visible (code)
-                binding.etName.setText(product.name)
-
-                val pesos = product.priceCents / 100.0
-                binding.etPrice.setText(pesos.toString())
-
-                binding.etQty.setText(product.quantity.toString())
+            binding.btnEditar.isEnabled = habilitar
+            if (habilitar) {
+                binding.btnEditar.setTextColor(android.graphics.Color.WHITE)
+                binding.btnEditar.setTypeface(null, android.graphics.Typeface.BOLD)
+                binding.btnEditar.background.setTint(android.graphics.Color.parseColor("#FF5722"))
+            } else {
+                binding.btnEditar.setTextColor(android.graphics.Color.LTGRAY)
+                binding.btnEditar.setTypeface(null, android.graphics.Typeface.NORMAL)
+                binding.btnEditar.background.setTint(android.graphics.Color.DKGRAY)
             }
         }
+        binding.etName.addTextChangedListener { validar() }
+        binding.etPrice.addTextChangedListener { validar() }
+        binding.etQty.addTextChangedListener { validar() }
     }
 
-    /**
-     * Guarda los cambios realizados en el producto.
-     *
-     * Valida los campos obligatorios y numéricos antes de actualizar la base de datos.
-     * Convierte el precio a centavos para almacenarlo correctamente.
-     * Muestra un Toast de confirmación y cierra la actividad al finalizar.
-     */
     private fun saveChanges() {
         val nombre = binding.etName.text.toString().trim()
         val precioTxt = binding.etPrice.text.toString().trim()
         val cantidadTxt = binding.etQty.text.toString().trim()
 
-        if (nombre.isEmpty() || precioTxt.isEmpty() || cantidadTxt.isEmpty()) {
-            Toast.makeText(this, "Completa todos los campos", Toast.LENGTH_SHORT).show()
-            return
-        }
+        if (nombre.isEmpty() || precioTxt.isEmpty() || cantidadTxt.isEmpty()) return
 
-        val cantidad = cantidadTxt.toIntOrNull()
-        // Cambiamos coma por punto por si el usuario mete decimales con coma
-        val precioDouble = precioTxt.replace(",", ".").toDoubleOrNull()
-
-        if (cantidad == null || precioDouble == null) {
-            Toast.makeText(this, "Valores numéricos inválidos", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        // Convertir precio de pesos a centavos
+        val cantidad = cantidadTxt.toIntOrNull() ?: 0
+        val precioDouble = precioTxt.replace(",", ".").toDoubleOrNull() ?: 0.0
         val priceCents = (precioDouble * 100).roundToLong()
 
-        // Crear objeto actualizado del producto
         val updated = ProductEntity(
-            id = currentProductId,   // mantenemos id de Firestore
-            code = originalCode,     // PK no se cambia
+            id = currentProductId,
+            code = originalCode,
             name = nombre,
             priceCents = priceCents,
             quantity = cantidad
         )
 
-        // Guardar en la base de datos en un hilo IO
+        binding.btnEditar.isEnabled = false
+        binding.btnEditar.text = "Guardando..."
+
         lifecycleScope.launch(Dispatchers.IO) {
+            // 1. Guardar en Room (Local)
             val dao = db.productDao()
             dao.upsert(updated)
 
+            // 2. Guardar en Firestore (Nube)
+            if (currentProductId != null) {
+                try {
+                    val map = mapOf(
+                        "name" to nombre,
+                        "price" to precioDouble,
+                        "quantity" to cantidad
+                    )
+                    firestore.collection("products").document(currentProductId!!).update(map)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
             withContext(Dispatchers.Main) {
-                Toast.makeText(
-                    this@EditProductActivity,
-                    "Producto actualizado",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(this@EditProductActivity, "Producto actualizado", Toast.LENGTH_SHORT).show()
                 finish()
             }
         }

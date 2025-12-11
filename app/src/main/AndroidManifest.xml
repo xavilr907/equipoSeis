@@ -32,7 +32,7 @@
 
         <!-- ✏️ Activity de edición -->
         <activity
-            android:name=".EditProductActivity"
+            android:name=".ui.EditProductActivity"
             android:exported="false" />
 
         <!-- ⬇️ WIDGET -->
