@@ -1,5 +1,6 @@
 package com.univalle.inventarioapp.ui.home
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.*
@@ -131,6 +132,14 @@ class HomeFragment : Fragment() {
             R.id.action_logout -> {
                 // CRITERIO 3: Logout limpia backstack
                 auth.signOut()
+
+                // Limpiar SharedPreferences del widget
+                val prefs = requireContext().getSharedPreferences("inventory_widget_prefs", Context.MODE_PRIVATE)
+                prefs.edit().clear().apply()
+
+                // Actualizar widget para mostrar estado sin sesión
+                updateWidget()
+
                 val intent = Intent(requireContext(), LoginActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     putExtra("fromWidget", false)

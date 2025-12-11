@@ -9,6 +9,7 @@ import android.content.Intent
 import android.widget.RemoteViews
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.google.firebase.auth.FirebaseAuth
 import com.univalle.inventarioapp.workers.WidgetUpdateWorker
 
 /**
@@ -46,19 +47,18 @@ class InventoryWidget : AppWidgetProvider() {
 
         when (action) {
             ACTION_TOGGLE -> {
-                // CRITERIO 10: Click en ojo abierto/cerrado
-                val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                val hasTotal = prefs.contains(KEY_TOTAL) &&
-                              prefs.getString(KEY_TOTAL, null) != "$ 0,00" &&
-                              prefs.getString(KEY_TOTAL, null) != "$ ****"
+                // CRITERIO 7 y 10: Click en ojo
+                // Verificar autenticación REAL usando FirebaseAuth
+                val currentUser = FirebaseAuth.getInstance().currentUser
 
-                // Si NO hay sesión, ir al Login (Criterio 10)
-                if (!hasTotal) {
-                    openLogin(context, fromGestionar = false)  // fromGestionar = false → Vuelve al widget
+                // Si NO hay sesión activa → Ir al Login (Criterio 10)
+                if (currentUser == null) {
+                    openLogin(context, fromGestionar = false)  // Vuelve al widget
                     return
                 }
 
-                // Si hay sesión, hacer toggle normal
+                // Si hay sesión → Hacer toggle normal (Criterio 7)
+                val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 val current = prefs.getBoolean(KEY_HIDDEN, true)
                 prefs.edit().putBoolean(KEY_HIDDEN, !current).apply()
 
@@ -67,14 +67,14 @@ class InventoryWidget : AppWidgetProvider() {
             }
 
             ACTION_GESTIONAR -> {
-                // Verificar auth mediante SharedPreferences (Worker ya guardó el total solo si hay auth)
-                val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                val hasTotal = prefs.contains(KEY_TOTAL) &&
-                              prefs.getString(KEY_TOTAL, null) != "$ 0,00"
+                // Verificar autenticación REAL usando FirebaseAuth
+                val currentUser = FirebaseAuth.getInstance().currentUser
 
-                if (hasTotal) {
+                if (currentUser != null) {
+                    // Hay sesión → Ir al Home
                     openHome(context)
                 } else {
+                    // NO hay sesión → Ir al Login
                     openLogin(context, fromGestionar = true)
                 }
             }
@@ -114,16 +114,29 @@ class InventoryWidget : AppWidgetProvider() {
         views.setOnClickPendingIntent(R.id.imgGestionar, gestionarPI)
         views.setOnClickPendingIntent(R.id.txtGestionar, gestionarPI)
 
+        // CRITERIO 7 y 10: Verificar autenticación REAL
+        val currentUser = FirebaseAuth.getInstance().currentUser
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val isHidden = prefs.getBoolean(KEY_HIDDEN, true)
         val total = prefs.getString(KEY_TOTAL, "$ ****") ?: "$ ****"
 
-        if (isHidden || total == "$ ****" || total == "$ 0,00") {
-            // Oculto o sin datos: mostrar asteriscos
+        // LÓGICA CORREGIDA:
+        // 1. Si NO hay usuario autenticado → SIEMPRE mostrar asteriscos y ojo cerrado
+        // 2. Si hay usuario Y está oculto (isHidden=true) → Mostrar asteriscos y ojo cerrado
+        // 3. Si hay usuario Y está visible (isHidden=false) → Mostrar saldo y ojo abierto
+
+        if (currentUser == null) {
+            // SIN AUTENTICACIÓN: Siempre oculto
             views.setTextViewText(R.id.txtSaldo, "$ ****")
             views.setImageViewResource(R.id.btnToggle, R.drawable.cerrado)
+
+        } else if (isHidden) {
+            // CON AUTENTICACIÓN pero OCULTO: Mostrar asteriscos
+            views.setTextViewText(R.id.txtSaldo, "$ ****")
+            views.setImageViewResource(R.id.btnToggle, R.drawable.cerrado)
+
         } else {
-            // Visible y con datos: mostrar total formateado
+            // CON AUTENTICACIÓN y VISIBLE: Mostrar saldo real
             views.setTextViewText(R.id.txtSaldo, total)
             views.setImageViewResource(R.id.btnToggle, R.drawable.abierto)
         }
