@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.google.firebase.auth.FirebaseAuth
+import com.univalle.inventarioapp.InventoryWidget
 import com.univalle.inventarioapp.LoginActivity
 import com.univalle.inventarioapp.R
 import com.univalle.inventarioapp.databinding.FragmentHomeBinding
@@ -22,26 +23,15 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * Fragment de Inventario (HU3)
- * Muestra la lista de productos desde Firestore
- * Cumple criterios:
- * - Persistencia de sesión (MainActivity verifica)
- * - Diseño con colores especificados
- * - Logout limpia backstack
- * - Botón atrás minimiza app
- * - Lista con diseño especificado
- * - Estado de carga
- * - FAB naranja
- * - Navegación a detalle
- */
+import com.univalle.inventarioapp.data.model.ProductEntity
+
+
 @AndroidEntryPoint
 class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
 
-    // ViewModel inyectado por Hilt
     private val vm: HomeViewModel by viewModels()
 
     @Inject
@@ -61,7 +51,6 @@ class HomeFragment : Fragment() {
         super.onCreate(savedInstanceState)
         setHasOptionsMenu(true)
 
-        // CRITERIO 4: BackHandler para minimizar app en lugar de volver a Login
         requireActivity().onBackPressedDispatcher.addCallback(this) {
             requireActivity().moveTaskToBack(true)
         }
@@ -79,20 +68,16 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // CRITERIO 2: Toolbar configurado
         (requireActivity() as AppCompatActivity).setSupportActionBar(binding.toolbarHome)
 
-        // RecyclerView
         binding.rvProducts.layoutManager = LinearLayoutManager(requireContext())
         binding.rvProducts.adapter = adapter
 
-        // Observar StateFlow para estados UI (Loading, Success, Error)
+        // STATEFLOW
         viewLifecycleOwner.lifecycleScope.launch {
             vm.uiState.collect { state ->
                 when (state) {
-                    is UiState.Loading -> {
-                        binding.progressHome.visibility = View.VISIBLE
-                    }
+                    is UiState.Loading -> binding.progressHome.visibility = View.VISIBLE
                     is UiState.Success -> {
                         binding.progressHome.visibility = View.GONE
                         adapter.submitList(state.products)
@@ -100,28 +85,54 @@ class HomeFragment : Fragment() {
                         // Actualizar widget cuando cambian los productos
                         updateWidget()
                     }
-                    is UiState.Error -> {
-                        binding.progressHome.visibility = View.GONE
-                        // Mostrar error (puedes agregar un TextView o Snackbar)
-                    }
+                    is UiState.Error -> binding.progressHome.visibility = View.GONE
                 }
             }
         }
 
-        // Observar LiveData de productos (compatibilidad)
+        // LIVEDATA (por compatibilidad)
         vm.products.observe(viewLifecycleOwner) { list ->
             binding.progressHome.visibility = View.GONE
             adapter.submitList(list)
+            calculateAndSaveTotal(list)
         }
 
-
-        // CRITERIO 7: FAB agregar producto
         binding.fabAdd.setOnClickListener {
             findNavController().navigate(R.id.action_homeFragment_to_addProductFragment)
         }
     }
 
-    // CRITERIO 3: Menú cerrar sesión
+    /**
+     * ======================================================
+     * 🟧 CÁLCULO DEL INVENTARIO + GUARDA EN PREFERENCIAS
+     * ======================================================
+     */
+    private fun calculateAndSaveTotal(products: List<ProductEntity>) {
+        var total = 0.0
+
+        for (p in products) {
+            val price = p.priceCents / 100.0
+            total += price * p.quantity
+        }
+
+        val formatted = "$ " + String.format("%.2f", total)
+
+        // Guardar para el widget
+        val prefs = requireContext().getSharedPreferences("inventory_widget_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putString("totalInventory", formatted).apply()
+
+        // Enviar broadcast al widget
+        refreshWidget()
+    }
+
+    private fun refreshWidget() {
+        val intent = Intent(requireContext(), InventoryWidget::class.java).apply {
+            action = "com.univalle.inventarioapp.ACTION_REFRESH_WIDGET"
+        }
+        requireContext().sendBroadcast(intent)
+    }
+
+    // MENÚ
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         inflater.inflate(R.menu.menu_home, menu)
         super.onCreateOptionsMenu(menu, inflater)
@@ -130,7 +141,6 @@ class HomeFragment : Fragment() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_logout -> {
-                // CRITERIO 3: Logout limpia backstack
                 auth.signOut()
 
                 // Limpiar SharedPreferences del widget
