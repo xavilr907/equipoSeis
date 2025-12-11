@@ -10,10 +10,13 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.google.firebase.auth.FirebaseAuth
 import com.univalle.inventarioapp.LoginActivity
 import com.univalle.inventarioapp.R
 import com.univalle.inventarioapp.databinding.FragmentHomeBinding
+import com.univalle.inventarioapp.workers.WidgetUpdateWorker
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -92,6 +95,9 @@ class HomeFragment : Fragment() {
                     is UiState.Success -> {
                         binding.progressHome.visibility = View.GONE
                         adapter.submitList(state.products)
+
+                        // Actualizar widget cuando cambian los productos
+                        updateWidget()
                     }
                     is UiState.Error -> {
                         binding.progressHome.visibility = View.GONE
@@ -134,6 +140,15 @@ class HomeFragment : Fragment() {
             }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    private fun updateWidget() {
+        // Disparar Worker para actualizar el widget con el total actualizado
+        val workRequest = OneTimeWorkRequestBuilder<WidgetUpdateWorker>()
+            .addTag(WidgetUpdateWorker.TAG)
+            .build()
+
+        WorkManager.getInstance(requireContext()).enqueue(workRequest)
     }
 
     override fun onDestroyView() {
