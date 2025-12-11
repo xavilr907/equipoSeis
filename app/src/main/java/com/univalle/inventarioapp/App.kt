@@ -2,11 +2,17 @@ package com.univalle.inventarioapp
 
 import android.app.Application
 import androidx.room.Room
+import androidx.work.Configuration
+import androidx.work.WorkManager
 import com.univalle.inventarioapp.data.local.AppDatabase
 import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 
 @HiltAndroidApp
-class App : Application() {
+class App : Application(), Configuration.Provider {
+
+    @Inject
+    lateinit var workerFactory: androidx.work.WorkerFactory
 
     companion object {
         lateinit var db: AppDatabase
@@ -25,4 +31,9 @@ class App : Application() {
             .fallbackToDestructiveMigration()
             .build()
     }
+
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .build()
 }
