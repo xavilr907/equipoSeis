@@ -22,10 +22,7 @@ data class ProductDetailUiState(
     val error: String? = null
 )
 
-sealed class ProductDetailEvent {
-    object NavigateBack : ProductDetailEvent()
-    object NavigateToEdit : ProductDetailEvent()
-}
+
 
 @HiltViewModel
 class ProductDetailViewModel @Inject constructor(

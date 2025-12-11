@@ -10,6 +10,9 @@ plugins {
 
     // Dagger Hilt
     id("com.google.dagger.hilt.android")
+
+    alias(libs.plugins.navigationSafeArgs)
+
 }
 
 android {

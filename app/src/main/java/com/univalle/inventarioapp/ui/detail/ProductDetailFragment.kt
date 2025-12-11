@@ -37,6 +37,9 @@ class ProductDetailFragment : Fragment(R.layout.fragment_product_detail) {
     }
 
     private fun setupListeners() {
+
+        binding.toolbarDetail.setNavigationIcon(R.drawable.ic_arrow_back_white)
+
         // Flecha atrás
         binding.toolbarDetail.setNavigationOnClickListener {
             vm.onBack()
@@ -61,14 +64,7 @@ class ProductDetailFragment : Fragment(R.layout.fragment_product_detail) {
                     binding.progressBar.visibility =
                         if (ui.loading) View.VISIBLE else View.GONE
 
-                    if (ui.error != null) {
-                        binding.textError.apply {
-                            visibility = View.VISIBLE
-                            text = ui.error
-                        }
-                    } else {
-                        binding.textError.visibility = View.GONE
-                    }
+
 
                     ui.product?.let { product ->
                         binding.textName.text = product.name
@@ -94,10 +90,11 @@ class ProductDetailFragment : Fragment(R.layout.fragment_product_detail) {
                         }
 
                         ProductDetailEvent.NavigateToEdit -> {
-                            findNavController().navigate(
-                                R.id.action_productDetailFragment_to_editProductFragment,
-                                Bundle().apply { putString("productCode", args.productCode) }
-                            )
+                            val action = ProductDetailFragmentDirections
+                                .actionProductDetailFragmentToEditProductFragment(args.productCode)
+
+                            findNavController().navigate(action)
+
                         }
                     }
                 }

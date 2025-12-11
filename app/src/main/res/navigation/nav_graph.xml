@@ -41,6 +41,15 @@
     <fragment
         android:id="@+id/editProductFragment"
         android:name="com.univalle.inventarioapp.ui.edit.EditProductFragment"
-        android:label="Editar" />
+        android:label="Editar">
+
+        <argument
+            android:name="productCode"
+            app:argType="string" />
+
+    </fragment>
+
+
+
 
 </navigation>
