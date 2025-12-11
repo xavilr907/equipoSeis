@@ -1,5 +1,6 @@
 package com.univalle.inventarioapp.ui.detail
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
@@ -11,6 +12,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.univalle.inventarioapp.R
 import com.univalle.inventarioapp.databinding.FragmentProductDetailBinding
+import com.univalle.inventarioapp.ui.EditProductActivity // Asegúrate de que este import coincida con tu paquete
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
@@ -64,8 +66,6 @@ class ProductDetailFragment : Fragment(R.layout.fragment_product_detail) {
                     binding.progressBar.visibility =
                         if (ui.loading) View.VISIBLE else View.GONE
 
-
-
                     ui.product?.let { product ->
                         binding.textName.text = product.name
                         binding.textQuantity.text = product.quantity.toString()
@@ -90,11 +90,10 @@ class ProductDetailFragment : Fragment(R.layout.fragment_product_detail) {
                         }
 
                         ProductDetailEvent.NavigateToEdit -> {
-                            val action = ProductDetailFragmentDirections
-                                .actionProductDetailFragmentToEditProductFragment(args.productCode)
-
-                            findNavController().navigate(action)
-
+                            // CAMBIO: Usamos Intent para abrir la Activity de Editar
+                            val intent = Intent(requireContext(), EditProductActivity::class.java)
+                            intent.putExtra("EXTRA_CODE", args.productCode)
+                            startActivity(intent)
                         }
                     }
                 }
