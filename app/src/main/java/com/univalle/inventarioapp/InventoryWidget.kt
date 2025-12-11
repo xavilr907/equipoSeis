@@ -7,8 +7,15 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.google.firebase.auth.FirebaseAuth
+import com.univalle.inventarioapp.workers.WidgetUpdateWorker
 
+/**
+ * Widget de Inventario que muestra el total calculado
+ * Usa WorkManager para operaciones asíncronas con Hilt
+ */
 class InventoryWidget : AppWidgetProvider() {
 
     companion object {
@@ -17,10 +24,17 @@ class InventoryWidget : AppWidgetProvider() {
         private const val ACTION_REFRESH = "com.univalle.inventarioapp.ACTION_REFRESH_WIDGET"
         private const val PREFS = "inventory_widget_prefs"
         private const val KEY_HIDDEN = "is_hidden"
+        private const val KEY_TOTAL = "totalInventory"
     }
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        for (id in appWidgetIds) updateSingleWidget(context, appWidgetManager, id)
+        // Disparar Worker para calcular total asíncronamente
+        scheduleWidgetUpdate(context)
+
+        // Actualizar UI de todos los widgets
+        for (id in appWidgetIds) {
+            updateSingleWidget(context, appWidgetManager, id)
+        }
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -33,26 +47,51 @@ class InventoryWidget : AppWidgetProvider() {
 
         when (action) {
             ACTION_TOGGLE -> {
-                val user = FirebaseAuth.getInstance().currentUser
-                if (user == null) {
-                    openLogin(context)
+                // CRITERIO 7 y 10: Click en ojo
+                // Verificar autenticación REAL usando FirebaseAuth
+                val currentUser = FirebaseAuth.getInstance().currentUser
+
+                // Si NO hay sesión activa → Ir al Login (Criterio 10)
+                if (currentUser == null) {
+                    openLogin(context, fromGestionar = false)  // Vuelve al widget
                     return
                 }
+
+                // Si hay sesión → Hacer toggle normal (Criterio 7)
                 val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 val current = prefs.getBoolean(KEY_HIDDEN, true)
                 prefs.edit().putBoolean(KEY_HIDDEN, !current).apply()
+
+                // Actualizar widgets
                 onUpdate(context, manager, ids)
             }
 
             ACTION_GESTIONAR -> {
-                val user = FirebaseAuth.getInstance().currentUser
-                if (user == null) openLogin(context) else openHome(context)
+                // Verificar autenticación REAL usando FirebaseAuth
+                val currentUser = FirebaseAuth.getInstance().currentUser
+
+                if (currentUser != null) {
+                    // Hay sesión → Ir al Home
+                    openHome(context)
+                } else {
+                    // NO hay sesión → Ir al Login
+                    openLogin(context, fromGestionar = true)
+                }
             }
 
             ACTION_REFRESH -> {
+                scheduleWidgetUpdate(context)
                 onUpdate(context, manager, ids)
             }
         }
+    }
+
+    private fun scheduleWidgetUpdate(context: Context) {
+        val workRequest = OneTimeWorkRequestBuilder<WidgetUpdateWorker>()
+            .addTag(WidgetUpdateWorker.TAG)
+            .build()
+
+        WorkManager.getInstance(context).enqueue(workRequest)
     }
 
     private fun updateSingleWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
@@ -75,34 +114,43 @@ class InventoryWidget : AppWidgetProvider() {
         views.setOnClickPendingIntent(R.id.imgGestionar, gestionarPI)
         views.setOnClickPendingIntent(R.id.txtGestionar, gestionarPI)
 
+        // CRITERIO 7 y 10: Verificar autenticación REAL
+        val currentUser = FirebaseAuth.getInstance().currentUser
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        val isHiddenPref = prefs.getBoolean(KEY_HIDDEN, true)
+        val isHidden = prefs.getBoolean(KEY_HIDDEN, true)
+        val total = prefs.getString(KEY_TOTAL, "$ ****") ?: "$ ****"
 
-        val user = FirebaseAuth.getInstance().currentUser
-        if (user == null || isHiddenPref) {
-            // No hay sesión o está oculto: asteriscos
+        // LÓGICA CORREGIDA:
+        // 1. Si NO hay usuario autenticado → SIEMPRE mostrar asteriscos y ojo cerrado
+        // 2. Si hay usuario Y está oculto (isHidden=true) → Mostrar asteriscos y ojo cerrado
+        // 3. Si hay usuario Y está visible (isHidden=false) → Mostrar saldo y ojo abierto
+
+        if (currentUser == null) {
+            // SIN AUTENTICACIÓN: Siempre oculto
             views.setTextViewText(R.id.txtSaldo, "$ ****")
             views.setImageViewResource(R.id.btnToggle, R.drawable.cerrado)
-            views.setTextColor(R.id.txtSaldo, 0xFFFFFFFF.toInt()) // blanco
-            appWidgetManager.updateAppWidget(appWidgetId, views)
-            return
+
+        } else if (isHidden) {
+            // CON AUTENTICACIÓN pero OCULTO: Mostrar asteriscos
+            views.setTextViewText(R.id.txtSaldo, "$ ****")
+            views.setImageViewResource(R.id.btnToggle, R.drawable.cerrado)
+
+        } else {
+            // CON AUTENTICACIÓN y VISIBLE: Mostrar saldo real
+            views.setTextViewText(R.id.txtSaldo, total)
+            views.setImageViewResource(R.id.btnToggle, R.drawable.abierto)
         }
 
-        // Hay sesión y no está oculto -> mostrar total del inventario
-        views.setImageViewResource(R.id.btnToggle, R.drawable.abierto)
-
-        // Leer total desde SharedPreferences (el que se guardó en HomeFragment)
-        val total = prefs.getString("totalInventory", "$ ****") ?: "$ ****"
-        views.setTextViewText(R.id.txtSaldo, total)
-        views.setTextColor(R.id.txtSaldo, 0xFFFFFFFF.toInt()) // blanco
+        views.setTextColor(R.id.txtSaldo, 0xFFFFFFFF.toInt()) // Blanco
 
         appWidgetManager.updateAppWidget(appWidgetId, views)
     }
 
-    private fun openLogin(context: Context) {
+    private fun openLogin(context: Context, fromGestionar: Boolean = false) {
         val i = Intent(context, LoginActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra("fromWidget", true)
+            putExtra("fromWidgetGestionar", fromGestionar)
         }
         context.startActivity(i)
     }
@@ -113,10 +161,5 @@ class InventoryWidget : AppWidgetProvider() {
             putExtra("fromWidget", true)
         }
         context.startActivity(i)
-    }
-
-    // Extension para RemoteViews: cambiar color de texto
-    private fun RemoteViews.setTextColor(viewId: Int, color: Int) {
-        this.setTextColor(viewId, color)
     }
 }

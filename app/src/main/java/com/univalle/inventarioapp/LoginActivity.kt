@@ -134,26 +134,55 @@ class LoginActivity : AppCompatActivity() {
     }
 
     /**
-     * Navega a MainActivity (Home - HU3).
+     * Navega a MainActivity (Home - HU3) o cierra para volver al Widget.
+     * CRITERIO 10: Si viene del widget (ojo), NO ir al Home, solo cerrar y volver al widget.
      */
     private fun navigateToHome() {
         val fromWidget = intent.getBooleanExtra("fromWidget", false)
+        val fromWidgetGestionar = intent.getBooleanExtra("fromWidgetGestionar", false)
 
-        if (fromWidget) {
-            // Avisar al widget que ya hay sesión
-            val refresh = Intent().apply {
-                action = ACTION_REFRESH
-                setClass(this@LoginActivity, InventoryWidget::class.java)
+        when {
+            // CASO 1: Click en OJO del widget (Criterio 10)
+            // Usuario quiere ver el saldo → Volver al widget, NO al Home
+            fromWidget && !fromWidgetGestionar -> {
+                // 1. Actualizar widget para mostrar saldo
+                val refresh = Intent().apply {
+                    action = ACTION_REFRESH
+                    setClass(this@LoginActivity, InventoryWidget::class.java)
+                }
+                sendBroadcast(refresh)
+
+                // 2. Cerrar LoginActivity y volver al Widget
+                finish()
             }
-            sendBroadcast(refresh)
-        }
 
-        // Navegar a Home con flags para limpiar stack
-        val homeIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            // CASO 2: Click en GESTIONAR del widget
+            // Usuario quiere administrar inventario → Ir al Home
+            fromWidget && fromWidgetGestionar -> {
+                // 1. Actualizar widget
+                val refresh = Intent().apply {
+                    action = ACTION_REFRESH
+                    setClass(this@LoginActivity, InventoryWidget::class.java)
+                }
+                sendBroadcast(refresh)
+
+                // 2. Ir al Home
+                val homeIntent = Intent(this, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                }
+                startActivity(homeIntent)
+                finish()
+            }
+
+            // CASO 3: Login normal (desde la app, no desde widget)
+            else -> {
+                val homeIntent = Intent(this, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                }
+                startActivity(homeIntent)
+                finish()
+            }
         }
-        startActivity(homeIntent)
-        finish()
     }
 
     /**

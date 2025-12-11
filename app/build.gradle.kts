@@ -87,6 +87,15 @@ dependencies {
     kapt("com.google.dagger:hilt-android-compiler:2.51.1")
 
     // ================================
+    // WORKMANAGER (Para Widget)
+    // ================================
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // Hilt Worker (Inyección en Workers)
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    kapt("androidx.hilt:hilt-compiler:1.2.0")
+
+    // ================================
     // TESTING
     // ================================
     testImplementation(libs.junit)

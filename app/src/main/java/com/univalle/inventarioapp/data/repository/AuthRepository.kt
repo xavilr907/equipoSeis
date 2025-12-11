@@ -24,5 +24,11 @@ interface AuthRepository {
      * @return Resource<FirebaseUser> con el resultado de la operación
      */
     suspend fun signUp(email: String, password: String): Resource<FirebaseUser>
+
+    /**
+     * Obtiene el usuario actualmente autenticado.
+     * @return FirebaseUser? Usuario actual o null si no hay sesión
+     */
+    fun getCurrentUser(): FirebaseUser?
 }
 
