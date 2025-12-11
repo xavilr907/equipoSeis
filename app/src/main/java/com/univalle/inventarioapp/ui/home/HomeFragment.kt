@@ -1,5 +1,6 @@
 package com.univalle.inventarioapp.ui.home
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.*
@@ -16,6 +17,8 @@ import com.univalle.inventarioapp.R
 import com.univalle.inventarioapp.databinding.FragmentHomeBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import java.text.NumberFormat
+import java.util.Locale
 import javax.inject.Inject
 
 /**
@@ -100,6 +103,25 @@ class HomeFragment : Fragment() {
                 }
             }
         }
+
+        vm.products.observe(viewLifecycleOwner) { list ->
+            binding.progressHome.visibility = View.GONE
+            adapter.submitList(list)
+
+            // Calcular total del inventario
+            val totalValueCents = list.sumOf { it.priceCents * it.quantity }
+
+            //Covertir a pesos
+            val totalValuePesos = totalValueCents/ 100.0
+
+            // Formatear con puntos de miles sin deprecated
+            val formattedTotal = NumberFormat.getNumberInstance(Locale.forLanguageTag("es-CO")).format(totalValuePesos)
+
+            // Guardar en SharedPreferences para que el widget lo muestre
+            val prefs = requireContext().getSharedPreferences("inventory_widget_prefs", Context.MODE_PRIVATE)
+            prefs.edit().putString("totalInventory", "$ $formattedTotal").apply()
+        }
+
 
         // Observar LiveData de productos (compatibilidad)
         vm.products.observe(viewLifecycleOwner) { list ->
