@@ -148,7 +148,7 @@ class InventoryWidget : AppWidgetProvider() {
 
     private fun openLogin(context: Context, fromGestionar: Boolean = false) {
         val i = Intent(context, LoginActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra("fromWidget", true)
             putExtra("fromWidgetGestionar", fromGestionar)
         }
