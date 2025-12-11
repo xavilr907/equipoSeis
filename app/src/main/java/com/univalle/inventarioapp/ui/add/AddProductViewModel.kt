@@ -4,10 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.univalle.inventarioapp.data.local.ProductDao
 import com.univalle.inventarioapp.data.model.ProductEntity
-import com.univalle.inventarioapp.data.remote.FirestoreRepository   // 👈 ESTE IMPORT
+import com.univalle.inventarioapp.data.remote.FirestoreRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class AddProductViewModel(
+@HiltViewModel
+class AddProductViewModel @Inject constructor(
     private val productDao: ProductDao,
     private val fsRepo: FirestoreRepository
 ) : ViewModel() {
