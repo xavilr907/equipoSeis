@@ -46,8 +46,19 @@ class InventoryWidget : AppWidgetProvider() {
 
         when (action) {
             ACTION_TOGGLE -> {
-                // Toggle del estado oculto/visible
+                // CRITERIO 10: Click en ojo abierto/cerrado
                 val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                val hasTotal = prefs.contains(KEY_TOTAL) &&
+                              prefs.getString(KEY_TOTAL, null) != "$ 0,00" &&
+                              prefs.getString(KEY_TOTAL, null) != "$ ****"
+
+                // Si NO hay sesión, ir al Login (Criterio 10)
+                if (!hasTotal) {
+                    openLogin(context, fromGestionar = false)  // fromGestionar = false → Vuelve al widget
+                    return
+                }
+
+                // Si hay sesión, hacer toggle normal
                 val current = prefs.getBoolean(KEY_HIDDEN, true)
                 prefs.edit().putBoolean(KEY_HIDDEN, !current).apply()
 
