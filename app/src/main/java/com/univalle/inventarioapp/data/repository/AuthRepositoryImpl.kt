@@ -41,5 +41,9 @@ class AuthRepositoryImpl @Inject constructor(
             Resource.Error(e.message ?: "Error desconocido al registrar usuario")
         }
     }
+
+    override fun getCurrentUser(): FirebaseUser? {
+        return auth.currentUser
+    }
 }
 
