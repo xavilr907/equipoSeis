@@ -128,7 +128,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="168dp"
-        android:backgroundTint="#FF6D00"
+        android:backgroundTint="#FF5722"
         android:text="Editar"
         android:textColor="@android:color/white"
         android:textStyle="bold"
