@@ -97,18 +97,18 @@ class InventoryWidget : AppWidgetProvider() {
     private fun updateSingleWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
         val views = RemoteViews(context.packageName, R.layout.inventory_widget)
 
-        // Toggle (ojo)
-        val toggleIntent = Intent(context, InventoryWidget::class.java).apply { action = ACTION_TOGGLE }
+        // Intent toggle
         val togglePI = PendingIntent.getBroadcast(
-            context, 100, toggleIntent,
+            context, 100,
+            Intent(context, InventoryWidget::class.java).apply { action = ACTION_TOGGLE },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         views.setOnClickPendingIntent(R.id.btnToggle, togglePI)
 
-        // Gestionar inventario
-        val gestionarIntent = Intent(context, InventoryWidget::class.java).apply { action = ACTION_GESTIONAR }
+        // Intent gestionar
         val gestionarPI = PendingIntent.getBroadcast(
-            context, 101, gestionarIntent,
+            context, 101,
+            Intent(context, InventoryWidget::class.java).apply { action = ACTION_GESTIONAR },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         views.setOnClickPendingIntent(R.id.imgGestionar, gestionarPI)

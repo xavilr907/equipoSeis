@@ -17,9 +17,14 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class EditProductActivity : AppCompatActivity() {
 
+    // Binding de la vista
     private lateinit var binding: ActivityEditProductBinding
     private val viewModel: EditProductViewModel by viewModels()
 
+    /**
+     * Método llamado al crear la Activity.
+     * Inicializa la interfaz, recupera datos del Intent y configura validaciones.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityEditProductBinding.inflate(layoutInflater)
