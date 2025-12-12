@@ -1,5 +1,7 @@
 package com.univalle.inventarioapp.ui.home
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -84,6 +86,7 @@ class HomeFragment : Fragment() {
 
                         // Actualizar widget cuando cambian los productos
                         updateWidget()
+                        calculateAndSaveTotal(state.products)
                     }
                     is UiState.Error -> binding.progressHome.visibility = View.GONE
                 }
